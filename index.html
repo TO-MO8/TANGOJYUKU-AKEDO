@@ -134,7 +134,7 @@
 
 
 
-/* ===== Mobile readability patch (choices + stats) ===== */
+/* replaced */
 @media (max-width: 520px){
   /* pack stats into one row so "残り" stays up */
   .stats{
@@ -161,6 +161,32 @@
   .hud{ padding-top: 14px; }
   .header{ margin-bottom: 10px; }
 }
+
+/* ===== ULTRA BIG choices for mobile ===== */
+@media (max-width: 520px){
+
+  .stats{
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .choices{
+    gap: 16px;
+  }
+
+  button.choice{
+    padding: 22px 18px;
+    border-radius: 18px;
+  }
+
+  .choiceText{
+    font-size: 28px;     /* ← 問題文クラス級 */
+    line-height: 1.2;
+    font-weight: 800;
+  }
+
+}
+
 </style>
 </head>
 
