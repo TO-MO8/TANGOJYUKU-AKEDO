@@ -132,6 +132,35 @@
 #ttsHudPill.active{ color:#38d996; }
 #ttsHudPill.waiting{ color:#ff5c7a; }
 
+
+
+/* ===== Mobile readability patch (choices + stats) ===== */
+@media (max-width: 520px){
+  /* pack stats into one row so "残り" stays up */
+  .stats{
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  /* make choices larger and easier to tap */
+  .choices{ gap: 14px; }
+
+  button.choice{
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  .choiceText{
+    font-size: 22px;
+    line-height: 1.25;
+    font-weight: 700;
+    letter-spacing: .3px;
+  }
+
+  /* slightly tighten vertical rhythm up top */
+  .hud{ padding-top: 14px; }
+  .header{ margin-bottom: 10px; }
+}
 </style>
 </head>
 
