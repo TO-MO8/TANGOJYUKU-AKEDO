@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>単語塾アーケード（落下ワード）</title>
 <style>
   :root{
@@ -20,6 +20,26 @@
                 var(--bg);
     color:var(--ink);
   }
+  /* --- Mobile safe-area / dynamic viewport fixes (top cut-off prevention) --- */
+  :root{
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+  }
+  /* Keep content away from notch/status bar while allowing header background to extend */
+  header{
+    padding-top: calc(14px + var(--sat));
+  }
+  /* Overlays should also respect safe area */
+  .overlay{
+    padding-top: calc(16px + var(--sat));
+    padding-bottom: calc(16px + var(--sab));
+  }
+  /* Use dynamic viewport units on mobile to avoid URL bar cropping */
+  #stageWrap{height: min(62vh, 520px); height: min(62dvh, 520px);}
+  @media (max-width:520px){
+    #stageWrap{height: min(62vh, 460px); height: min(62dvh, 460px);}
+  }
+
   header{
     padding: 14px 14px 10px;
     position: sticky; top:0; z-index:10;
