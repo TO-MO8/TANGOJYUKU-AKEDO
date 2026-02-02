@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>単語塾アーケード（落下ワード）</title>
 <style>
   :root{
@@ -325,6 +325,24 @@
   .right{text-align:right}
   .good{color:var(--good)}
   .bad{color:var(--bad)}
+
+
+  /* --- Mobile layout fixes: prevent "can't play because header eats screen" --- */
+  html, body{ max-width: 100%; overflow-x:hidden; }
+  @media (max-width: 520px){
+    header{ padding: 10px 12px; }
+    header .title h1{ font-size: 18px; line-height:1.15; }
+    header .title .tag{ font-size: 12px; padding: 6px 10px; }
+    .hud{ gap:8px; flex-wrap:wrap; }
+    .pill{ padding:10px 12px; }
+    #btnStart{ padding: 12px 14px; }
+    main{ padding: 10px; }
+    .card .hd{ padding: 10px 12px; }
+    .card .bd{ padding: 10px 12px; }
+  }
+
+  /* Let the stage grow to fill the remaining visible viewport (JS will fine-tune) */
+  #stageWrap{ height: min(60dvh, 560px); }
 </style>
 </head>
 <body>
@@ -742,6 +760,45 @@
 window.addEventListener('DOMContentLoaded', () => {
 (() => {
   "use strict";
+
+
+  // ----------------------------
+  // Mobile: fit stage to visible viewport (prevents "game screen is hidden")
+  // ----------------------------
+  const fitStageToViewport = () => {
+    const header = document.querySelector("header");
+    const stageWrap = document.querySelector("#stageWrap");
+    if(!header || !stageWrap) return;
+
+    // visualViewport is best on mobile (accounts for URL bar / keyboard)
+    const vv = window.visualViewport;
+    const vh = vv ? vv.height : window.innerHeight;
+
+    const headerH = header.getBoundingClientRect().height;
+
+    // Estimated non-stage vertical space inside the main card below stage (answer UI etc.)
+    // Keep it conservative so the stage stays comfortably visible.
+    const other = 260;
+
+    let avail = vh - headerH - other;
+
+    // Clamp stage height: not too tiny, not too huge
+    const h = Math.max(220, Math.min(560, Math.floor(avail)));
+
+    // Apply if it makes sense
+    if(Number.isFinite(h) && h > 0){
+      stageWrap.style.height = h + "px";
+    }
+  };
+
+  // Run on load + when viewport changes (URL bar, rotate, keyboard)
+  window.addEventListener("resize", fitStageToViewport, {passive:true});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize", fitStageToViewport, {passive:true});
+    window.visualViewport.addEventListener("scroll", fitStageToViewport, {passive:true});
+  }
+  fitStageToViewport();
+
 
   // ----------------------------
   // Small helpers
