@@ -194,6 +194,18 @@
     display:grid; gap:10px;
     grid-template-columns: 1fr 1fr;
   }
+
+  /* Answer header (モード/ターゲット + 発音/スキップ)
+     Mobile fix: prevent overlap by allowing clean wrapping + truncation. */
+  .answerTop{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap}
+  .answerLeft,.answerRight{display:flex; gap:8px; align-items:center; flex-wrap:wrap; min-width:0}
+  .answerLeft .pill{min-width:0}
+  #hudTarget{display:inline-block; max-width: 46vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  @media (max-width:520px){
+    .answerTop{justify-content:flex-start}
+    .answerRight{width:100%; justify-content:flex-end}
+    #hudTarget{max-width: 60vw}
+  }
   @media (max-width:520px){
     .answers{grid-template-columns:1fr}
     #stageWrap{height: min(62vh, 460px);}
@@ -444,12 +456,12 @@
       </div>
 
       <div id="answerArea">
-        <div class="row" style="justify-content:space-between">
-          <div class="row" style="gap:8px">
+        <div class="row answerTop">
+          <div class="row answerLeft" style="gap:8px">
             <span class="pill"><strong>モード</strong><span id="hudMode" class="mono">4択</span></span>
             <span class="pill"><strong>ターゲット</strong><span id="hudTarget" class="mono">-</span></span>
           </div>
-          <div class="row" style="gap:8px">
+          <div class="row answerRight" style="gap:8px">
             <button id="btnSpeak" class="btn small" disabled>🔊 発音</button>
             <button id="btnSkip" class="btn small" disabled>スキップ</button>
           </div>
