@@ -343,6 +343,51 @@
 
   /* Let the stage grow to fill the remaining visible viewport (JS will fine-tune) */
   #stageWrap{ height: min(60dvh, 560px); }
+
+
+  /* --- Mobile: give more room to the stage by compacting controls/answers --- */
+  #answerArea{ margin-top: 8px; }
+  @media (max-width: 520px){
+    /* Put 4 choices in 2 columns to save vertical space */
+    .answers{ grid-template-columns: 1fr 1fr !important; gap: 8px; }
+    .choice{ padding: 10px 10px; min-height: 46px; border-radius: 14px; }
+    .choice b{ font-size: 13px; }
+    .choice small{ font-size: 10px; }
+    /* Compact the pills and small buttons row */
+    .pill{ padding: 8px 10px; }
+    .btn.small{ padding: 8px 10px; }
+  }
+  @media (max-width: 340px){
+    .answers{ grid-template-columns: 1fr !important; }
+  }
+
+
+  /* --- Mobile: shrink the top header panel to free the stage area --- */
+  @media (max-width: 520px){
+    header{ padding-top: calc(8px + var(--sat)); padding-left:10px; padding-right:10px; padding-bottom:8px; }
+    header .row{ gap:8px; }
+    header .title h1{ font-size: 16px; line-height:1.12; }
+    header .title .tag{ display:none; } /* tag line takes vertical space */
+    #btnHelp, #btnSettings{ padding: 6px 10px; font-size: 12px; border-radius: 12px; }
+    /* Less vertical gaps between header blocks */
+    header .row[style*="margin-top"]{ margin-top: 6px !important; }
+
+    /* Pills become compact */
+    .pill{ padding: 6px 8px; border-radius: 14px; }
+    .pill strong{ font-size: 11px; }
+    .pill span{ font-size: 11px; }
+    .pill.meter .bar{ height: 8px; }
+    .pill.meter{ gap:6px; }
+
+    /* Hide CSV pill on small screens (still accessible via settings) */
+    #pillCsv{ display:none; }
+
+    /* Reduce button sizes */
+    #btnStart, #btnPause, #btnRestart{ padding: 8px 10px; font-size: 12px; border-radius: 14px; }
+
+    /* Hide pause/restart while disabled to keep header short before starting */
+    #btnPause:disabled, #btnRestart:disabled{ display:none; }
+  }
 </style>
 </head>
 <body>
@@ -363,7 +408,7 @@
       <div class="pill"><strong>スコア</strong><span id="hudScore" class="mono">0</span></div>
       <div class="pill"><strong>コンボ</strong><span id="hudCombo" class="mono">0</span></div>
       <div class="pill"><strong>命中</strong><span id="hudAcc" class="mono">0%</span></div>
-      <div class="pill"><strong>CSV</strong><span id="hudCsv" class="mono">内蔵サンプル</span></div>
+      <div class="pill" id="pillCsv"><strong>CSV</strong><span id="hudCsv" class="mono">内蔵サンプル</span></div>
     </div>
     <div class="hud">
       <div class="pill meter">
@@ -398,8 +443,8 @@
         </div>
       </div>
 
-      <div id="answerArea" style="margin-top:12px">
-        <div class="row" style="justify-content:space-between; margin-bottom:10px">
+      <div id="answerArea">
+        <div class="row" style="justify-content:space-between">
           <div class="row" style="gap:8px">
             <span class="pill"><strong>モード</strong><span id="hudMode" class="mono">4択</span></span>
             <span class="pill"><strong>ターゲット</strong><span id="hudTarget" class="mono">-</span></span>
@@ -713,7 +758,7 @@
       <button class="btn small" data-close="ovResults">閉じる</button>
     </div>
     <div class="bd">
-      <div class="row" style="justify-content:space-between; margin-bottom:10px">
+      <div class="row" style="justify-content:space-between">
         <div class="row">
           <div class="pill"><strong>今回</strong><span id="resScore" class="mono">0</span></div>
           <div class="pill"><strong>命中</strong><span id="resAcc" class="mono">0%</span></div>
@@ -725,7 +770,7 @@
         </div>
       </div>
 
-      <div class="row" style="justify-content:space-between; margin-bottom:10px">
+      <div class="row" style="justify-content:space-between">
         <div class="row">
           <div class="pill"><strong>今回順位</strong><span id="resRank" class="mono">-</span></div>
           <div class="pill"><strong>今日順位</strong><span id="resRankDay" class="mono">-</span></div>
@@ -778,12 +823,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Estimated non-stage vertical space inside the main card below stage (answer UI etc.)
     // Keep it conservative so the stage stays comfortably visible.
-    const other = 260;
+    const other = 190;
 
     let avail = vh - headerH - other;
 
     // Clamp stage height: not too tiny, not too huge
-    const h = Math.max(220, Math.min(560, Math.floor(avail)));
+    const h = Math.max(280, Math.min(680, Math.floor(avail)));
 
     // Apply if it makes sense
     if(Number.isFinite(h) && h > 0){
@@ -2809,7 +2854,7 @@ function getPromptText(it){
       <button class="btn small" data-close="ovRank">閉じる</button>
     </div>
     <div class="bd">
-      <div class="row" style="justify-content:space-between; margin-bottom:10px">
+      <div class="row" style="justify-content:space-between">
         <div class="row" style="gap:8px; flex-wrap:wrap">
           <button class="btn small" id="tabRankSession">自己ランキング</button>
           <button class="btn small" id="tabRankWords">苦手単語</button>
