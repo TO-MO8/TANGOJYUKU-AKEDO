@@ -1,0 +1,2078 @@
+コンテンツへとスキップする
+チャット履歴
+
+
+
+あなた:
+CODEXに言う文章（コピペ用）
+
+①短く強い版
+
+スマホのChromeでゲームを開くと、画面上部が切れてタイトルやボタンの上が見えません。
+上の安全領域（status bar/notch）を考慮して、上が絶対に切れないレイアウトに修正してください。
+具体的に：
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"> を追加/確認
+
+上部に padding-top: env(safe-area-inset-top) を入れる（ヘッダーや全体ラッパー）
+
+position: fixed のヘッダーや要素がある場合、top: 0 ＋ safe-area分の余白を足す
+
+overflow: hidden が body や親要素にあるなら原因になるので見直す
+修正後は、Android/iPhoneで上が切れず、スクロールしても上部が隠れないことを確認してください。
+
+②もっと具体的に版（より成功率高い）
+
+現在、上部のUI（タイトル/ボタン）がスマホChromeでステータスバー側に潜って切れています。
+おそらく 100vh や position: fixed、safe-area未対応が原因です。
+次を実装して上切れを解消してください：
+
+viewportメタに viewport-fit=cover を入れる
+
+ルートに padding-top: env(safe-area-inset-top) を追加（またはヘッダーに追加）
+
+ヘッダーが fixed/sticky なら top: 0 を守り、内側に safe-area ぶん padding を入れる
+
+高さ指定は 100vh だけに頼らず min-height: 100dvh も検討
+
+body の overflow: hidden を避ける（必要なら特定領域だけに適用）
+変更は見た目を大きく変えず、切れだけ直すこと。修正したファイルと差分を提示してください。
+
+もしCODEXが「どこを直すの？」って迷った時の追い打ち
+
+これも追加で投げると迷子になりにくいです👇
+
+上部が切れているのは、ヘッダー（タイトル行）が画面のY=0より上に描画されている/安全領域に食い込んでいるためです。
+header または最上位コンテナ（例: #app や .container）に safe-area 対応を入れてください。
+ChatGPT:
+了解、これそのままCODEXにコピペできる形で「短く強い」「具体的」「追い打ち」の3点セットを、さらに“迷子防止の指示フォーマット”に整えて整形したよ📌
+（あなたの元文の意図はそのまま、CODEXが動きやすい順番にしました）
+
+①短く強い版（コピペ用）
+スマホのChromeでゲームを開くと、画面上部が切れてタイトルやボタンの上が見えません。
+上の安全領域（status bar / notch）を考慮して、上が絶対に切れないレイアウトに修正してください。
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"> を追加/確認
+
+ヘッダー or 全体ラッパーに padding-top: env(safe-area-inset-top); を追加
+
+position: fixed/sticky な要素がある場合、top: 0 を守りつつ safe-area 分の余白を足す
+
+body や親要素に overflow: hidden があるなら原因になりうるので見直す
+
+修正後、Android/iPhone両方で「上が切れない」「スクロールしても上部が隠れない」ことを確認してください。
+
+②もっと具体的に版（成功率高い・コピペ用）
+現在、スマホChromeで上部UI（タイトル/ボタン）がステータスバー側に潜って切れています。
+原因は 100vh / position: fixed / safe-area未対応の組み合わせの可能性が高いです。
+次を実装して「上切れ」を解消してください（見た目は大きく変えない）：
+
+viewportメタに viewport-fit=cover を入れる
+
+最上位（例: body / #app / .container）に
+padding-top: env(safe-area-inset-top); を入れる（または header に入れる）
+
+header が fixed / sticky の場合
+
+top: 0 を維持
+
+safe-area分の padding-top を内側に入れる（または calc()で調整）
+
+高さ指定は 100vh だけに頼らず min-height: 100dvh も検討
+
+body { overflow: hidden; } は避ける（必要なら特定のゲーム領域だけに適用）
+
+修正したファイルと**差分（diff）**を提示してください。
+
+③「どこ直すの？」対策の追い打ち（追加で投げる用）
+上部が切れているのは、ヘッダー（タイトル行）が画面のY=0より上に描画されている / 安全領域に食い込んでいるためです。
+header または最上位コンテナ（例: #app や .container）に safe-area 対応（env(safe-area-inset-top)）を入れてください。
+100vh や fixed がある場合はそこが最優先の修正ポイントです。
+
+さらに成功率を上げる“CODEX向けの一言”オプション（任意）
+もしCODEXがやたら大改造しそうなら、最後にこれを1行足すと暴走しにくい：
+
+「UIデザインは変えず、上部が切れないように safe-area と vh/dvh 周りだけ最小修正で直してください。」
+
+必要なら、あなたのゲームの index.html / style.css（または全部） を貼ってくれたら、こっちで「あなたのコードに合わせた最短の修正案（差分つき）」もその場で作れるよ。
+
+あなた:
+tangojuku_arcade_v11_typing_feedback_no_answer_leak.html
+ファイル
+スマホで画面が切れてできません
+ChatGPT:
+
+思考時間: 35s
+スマホで上が切れてる原因、いまのHTMLだと safe-area（ノッチ/ステータスバー）未対応＋vhの挙動が絡んで起きやすいです。
+あなたのファイルを「上が絶対切れない」方向で修正した 完成版HTMLを作りました。
+tangojuku_arcade_v11_typing_fee…
+
+
+✅ 修正内容（入れたもの）
+
+viewport に viewport-fit=cover を追加
+
+header に padding-top: calc(… + env(safe-area-inset-top)) を追加（タイトルやボタンが潜らない）
+
+オーバーレイ（設定/結果など）も safe-area を考慮
+
+ステージ高さの vh を dvh でも上書き（スマホのURLバーで高さが変わっても崩れにくい）
+
+修正版HTML（これに差し替えてください）
+Download 修正版HTML
+
+GitHub Pages に置いてる場合の差し替え手順（超短）
+GitHubで対象リポジトリを開く
+
+index.html（または今アップしてるHTML）をこの修正版の中身で置き換え
+
+Commit（保存）
+
+スマホで 再読み込み（できれば「…」→「履歴を消去して再読み込み」）
+
+もしまだ上が切れる時の“最後の一手”
+端末によってはキャッシュがしつこいので、スマホ側でこれを試すと一気に直ることがあります：
+
+Chromeでページ長押し →「新しいタブで開く」
+
+URLの末尾に ?v=1 を付けて開く（キャッシュ無視）
+
+必要なら、あなたが公開してる 実際のURL を貼ってくれれば、スマホ想定で「どこが切れてるか」を前提に、さらにピンポイントに直す指示も出せます。 
+
+
+情報源
+あなた:
+画像をアップロードしました
+ゲーム画面が隠れてまともにゲームが出来ない
+ChatGPT:
+
+思考時間: 1m 40s
+画像ありがとう。いまの状態だと ヘッダー（上の情報・ボタン）が大きすぎて、肝心の「ステージ（落ちてくる部分）」が押しつぶされて まともに遊べない感じになってます（スクショでもステージが細い帯になってる）。
+
+なので今回は「safe-area」だけじゃなく、
+
+スマホ幅のときヘッダーを圧縮（文字・余白・並び）
+
+画面に見えてる高さ（URLバーやキーボード込み）から、ステージの高さを自動計算して確保
+
+この2つを入れて スマホでも必ずステージが見える ように修正しました。
+
+✅ 修正版（スマホで遊べるようにした v12）
+Download tangojuku_arcade_v12_mobile_playable_fix.html
+
+GitHub Pages に反映する手順（これだけ）
+GitHubでそのページのリポジトリを開く
+
+index.html（または今公開してるHTML）を このv12の中身で丸ごと置き換え
+
+Commit（保存）
+
+スマホのChromeで開いて、キャッシュ対策をやる
+
+URLの最後に ?v=12 を付けて開く（例：.../index.html?v=12）
+
+それでもダメなら「︙」→ 履歴削除 → 再読み込み
+
+それでも「まだ隠れる」場合（よくある原因）
+スマホChromeで 「PC版サイト」 になってると、レイアウトが崩れやすいです。
+Chromeの「︙」→ PC版サイト がONならOFFにしてください。
+
+もしよければ、次で一発で終わらせたいので
+いま開いてるURL（アドレスバーの全部） をそのまま貼ってください。
+（/TANG... の続きまで）
+それを見れば「どのファイルが実際に表示されてるか」まで含めてピンポイントで直せます。 
+
+あなた:
+https://to-mo8.github.io/TANGOJYUKU-AKEDO/　ゲームが出来ない
+ChatGPT:
+
+思考時間: 49s
+URLありがとう。状況わかったよ。
+
+いま https://to-mo8.github.io/TANGOJYUKU-AKEDO/ で表示されてるページは、スマホだと「上の操作パネルが大きすぎて、ステージ（落ちてくる部分）が押しつぶされる」タイプのレイアウトになってて、スクショの通り ゲーム領域がほぼ隠れて遊べない です。
+
+✅ 解決はシンプルで、GitHub Pages の中身（index.html）を“スマホ対応版”に差し替えるだけです。
+（さっき作った v12 がそれ）
+
+1) まずこれを使ってください（スマホで遊べる修正版）
+このファイルをダウンロードして使います：
+
+v12（スマホでステージが見えるように調整済み）
+Download tangojuku_arcade_v12_mobile_playable_fix.html
+
+2) GitHub Pages に反映する手順（いちばん確実）
+「GitHubで公開してるファイル」を置き換えます。
+
+A. PCでやる場合（簡単）
+GitHubで TANGOJYUKU-AKEDO リポジトリを開く
+
+一覧にある index.html を開く
+
+✏️（編集）で中身を全部消す
+
+v12ファイルをメモ帳で開いて 全文コピペ → GitHubに貼り付け
+
+下の Commit changes（保存）を押す
+
+1分くらい待ってからスマホで開く（キャッシュ対策は下）
+
+B. スマホだけでやる場合（確実ルート）
+GitHubアプリ or ブラウザでリポジトリを開く
+
+Add file → Upload files
+
+さっきの v12 をアップロード
+
+アップロードしたファイル名を index.html にする
+
+もし既に index.html があるなら、削除してから同名で上げるのが確実
+
+Commit（保存）
+
+3) 反映したのに変わらない時（99%これ）
+スマホChromeのキャッシュが原因です。
+
+URLの最後に ?v=12 を付けて開く
+例：https://to-mo8.github.io/TANGOJYUKU-AKEDO/?v=12
+
+Chromeの「︙」→ 閲覧履歴データ削除 → もう一回開く
+
+それと、Chromeの「︙」に PC版サイト があったらOFF（ONだと崩れやすい）
+
+すぐ確認できるチェック
+反映できてたら、スマホで開いた時に
+
+タイトル周りが少しコンパクトになって
+
+ステージ（落下エリア）がちゃんと縦に広く見える
+ようになります。
+
+もしよければ、あなたが次に送ってくれると“即断”できます👇
+**GitHubのリポジトリ画面のスクショ（ファイル一覧が見える画面）**を1枚送って。
+「index.html がどこにあるか」「どれを置き換えるべきか」を赤丸で指示するよ。
+
+あなた:
+画像をアップロードしました
+黄色い線までゲーム画面が切れてます赤いラインぐらいまでゲームの画面があることが理想
+ChatGPT:
+
+思考時間: 2m 2s
+画像、めちゃ分かりやすいです。
+今は 「回答パネル（4択ボタンなど）」が縦に場所を取りすぎて、ステージ（落下エリア）が黄色い線で押しつぶされている 状態です。
+
+なので今回は「上の安全領域」じゃなくて、
+
+✅ ステージを優先して縦に広げる
+✅ 回答ボタン等をスマホ用に“圧縮”して高さを節約する（2列配置）
+✅ 画面の見えてる高さから ステージ高さを自動計算して、できるだけ赤い範囲までステージを伸ばす
+
+この方針で直した v13 を作りました。
+
+✅ v13（スマホでステージがもっと広くなる版）
+Download tangojuku_arcade_v13_more_stage_on_mobile.html
+
+v13でやったこと
+4択を スマホでも2列 にして縦の圧迫を減らす
+
+ボタンや余白をスマホ用に 小さめ にする
+
+ステージの高さ計算で、下のUIに取り置きしていた分（予約席）を減らして ステージを大きく確保
+
+端末の「実際に見えてる高さ（URLバー等）」に合わせて自動調整
+
+GitHub Pages に反映（これだけ）
+あなたのURL（to-mo8.github.io/TANGOJYUKU-AKEDO/）は index.html が表示されてます。
+だから index.html を v13 の中身で置き換えればOKです。
+
+GitHubでリポジトリを開く
+
+index.html を編集 ✏️
+
+中身を全部消す
+
+v13ファイルを開いて全文コピペ
+
+Commit
+
+スマホでこれで開く（キャッシュ回避）
+https://to-mo8.github.io/TANGOJYUKU-AKEDO/?v=13
+
+もし v13でも「まだ黄色で切れる」なら
+その場合は「ステージをさらに広げる」ために、回答エリアを
+
+下に固定（常に見える） にする
+または
+
+トグル式（普段は畳む） にする
+
+どっちがいい？（あなたの理想に合わせて次の版を作るよ）
+
+下固定（ゲーム感UP・常に押せる）
+
+畳める（ステージ最大化・必要な時だけ開く）
+
+
+
+あなた:
+画像をアップロードしました
+上の画面が三分の１ぐらいつかってるので上をもっと小さくしたい
+ChatGPT:
+
+思考時間: 1m 35s
+OK、スクショの「①（上）」がデカすぎてステージ（②）が潰れてます。
+なので **上（ヘッダー）をスマホ時だけ“ギュッと圧縮”**して、ステージを広げる版を作りました。
+
+✅ v14（上を小さくして、ゲーム画面を広げる）
+Download tangojuku_arcade_v14_smaller_top_panel.html
+
+v14でやったこと（上が小さくなる理由）
+スマホ幅（520px以下）の時だけ：
+
+タイトル周りの余白を縮小
+
+タグ行（「CSV対応/コンボ/ボス復習」）は 非表示（縦を食うので）
+
+スコア等のピルを 小型化
+
+CSVピルを非表示（設定で確認できるのでヘッダーから外す）
+
+一時停止/リスタートは“無効の間は非表示”
+→ ゲーム開始前のヘッダーが一気に低くなる（ここが効きます）
+
+これで「上が1/3使ってる」状態からかなり改善されます。
+
+GitHub Pages に反映（いまのURLに効かせる）
+GitHubの TANGOJYUKU-AKEDO を開く
+
+index.html を編集 ✏️
+
+中身を全部消して、v14を全文コピペ
+
+Commit
+
+スマホでこれで開く（キャッシュ回避）
+https://to-mo8.github.io/TANGOJYUKU-AKEDO/?v=14
+
+もし「まだ上がデカい」なら次の手（さらに強い）
+上をもっと削るには
+「使い方/設定」を右上の「︙」メニューにまとめて、普段は隠す
+が一番効きます。
+それも版としてすぐ作れます（UIはほぼ同じで高さだけ減る）。
+
+まずは v14 を入れて、スマホでステージがどれくらい広がったかスクショ1枚ください。そこから“あと何px削るか”で追い込みます。
+
+
+
+あなた:
+画像をアップロードしました
+画像をアップロードしました
+一枚目１３分前
+ChatGPT:
+
+思考時間: 20s
+スクショ見る限り、状況はこうです👇
+
+#37 は失敗（赤）
+
+#38 は成功（緑） → つまり いま公開されてるのは #38 の成果物 です
+
+なので「失敗したせいで公開できてない」ではなく、**成功したのにスマホ側で古い表示を見てる（キャッシュ）**か、公開元フォルダがズレてる可能性が高いです。
+
+まず最短で確認（これが一番効く）
+スマホでこのURLにして開いてください（キャッシュ無視）：
+
+https://to-mo8.github.io/TANGOJYUKU-AKEDO/?v=14
+
+さらに確実にするなら
+
+Chromeの「︙」→ 閲覧履歴データ削除（キャッシュ）
+
+もしくは シークレットタブで開く
+
+#38 が本当に “あなたの最新ファイル” か確認する方法
+GitHub の Actions 画面で：
+
+pages build and deployment #38 を開く
+
+真ん中の図の deploy の箱をクリック
+
+そこに出るリンク（https://to-mo8.github.io/...）から開く
+
+ここから開くと「#38の成果物を見に行く」動線になるので、ズレが一気に分かります。
+
+よくある “公開元ズレ” のチェック
+あなたのリポジトリ設定で Pages の公開元が
+
+root（/） なのか
+
+/docs なのか
+
+で、置き換えるファイルが変わります。
+
+ここを確認
+Settings → Pages → Build and deployment
+
+Source が GitHub Actions ならOK（今スクショはたぶんこれ）
+
+もし “Branch /docs” になってたら
+docsフォルダの中の index.html を置き換えないと反映されません
+
+たまに起きる「Jekyllが邪魔して壊す」対策（保険）
+ゲームみたいな “ただのHTML” なら、Jekyllを完全に止めるのが安定です。
+
+すること
+リポジトリの一番上（index.html と同じ階層）に
+.nojekyll という空ファイルを作って commit。
+
+これだけで「Jekyllのせいで変なビルド」系がかなり消えます。
+
+次にやってほしいこと（最短で原因確定）
+スマホで ?v=14 つきで開いたスクショを1枚
+
+できれば Settings → Pages の画面のスクショも1枚
+
+この2枚で、「キャッシュ」なのか「公開元ズレ」なのか「Jekyll」なのかを一発で確定して、手順を“赤丸で”指示します。
+
+あなた:
+４０４でました
+ChatGPT:
+
+思考時間: 21s
+404が出たのは「URLの打ち間違い」か「v14ファイルをサイトに置いてない」パターンがほぼ全部です。
+
+まず確認なんだけど、あなたの公開ページ自体は いま普通に表示できています。
+
+なので「サイト全体が死んでる」わけじゃありません。
+
+404が出やすい2大原因と直し方
+① …/tangojuku_arcade_v14_smaller_top_panel.html にアクセスしてる
+これ、リポジトリにそのファイル名でアップしていなければ404になります。
+
+✅ 解決はどっちか
+
+A：v14を “index.html に上書き”（おすすめ。URLが変わらない）
+
+リポジトリの index.html を開く
+
+中身を全部 v14 の内容に置き換えて Commit
+
+開くURLはこれだけ
+https://to-mo8.github.io/TANGOJYUKU-AKEDO/
+
+B：v14ファイルをその名前でアップする
+
+tangojuku_arcade_v14_smaller_top_panel.html という名前でリポジトリ直下に追加して Commit
+
+開くURLはこう
+https://to-mo8.github.io/TANGOJYUKU-AKEDO/tangojuku_arcade_v14_smaller_top_panel.html
+
+※ Aの方が管理が楽です（いつも index.html だけ差し替えればOK）。
+
+② URLが微妙に違う（GitHub Pagesは大文字小文字が別物）
+よくあるのがこれ👇
+
+TANGOJYUKU-AKEDO を tangojyuku-akedo みたいに打った
+
+末尾の / が抜けてたり、別のパスになってる
+
+✅ 正しい基準URLはこれ
+https://to-mo8.github.io/TANGOJYUKU-AKEDO/
+
+いま一番確実な手順（コピペでOK）
+GitHub のリポジトリを開く（Codeタブ）
+
+index.html をクリック
+
+✏️編集
+
+v14の中身を全部コピペして貼る
+
+Commit
+
+スマホでこれで開く（キャッシュ避け）
+https://to-mo8.github.io/TANGOJYUKU-AKEDO/?v=14
+
+※ ?v=14 は “404回避” じゃなくて キャッシュ回避のための飾りです。ページ自体は同じ場所にないとダメ。
+
+次の一手（最短で原因特定）
+「404が出た時のURL」を、そのままコピペで送ってください。
+（そこが分かれば、Aが必要なのかBが必要なのか即断で指示できます）
+
+あと、GitHub の Code（ファイル一覧） のスクショも1枚あると、index.html がどこにあるか赤丸で案内できます。
+
+あなた:
+原因わからないけどあたらしいリポジトリつくったほうがいい？
+ChatGPT:
+結論：今すぐ新しいリポジトリを作る必要はないです。
+404はたいてい「置き場所（公開元）とURLの不一致」か「index.htmlが想定の場所にない」だけで、直せます。
+
+ただし、あなたが今みたいに
+
+Pagesのビルドは成功してるのに
+
+スマホでは404が出たり、反映がよく分からなくなってきた
+
+という状態なら、“整理のために新規リポジトリに引っ越し”はアリです。
+（直すより早いこともある）
+
+まず、今のリポジトリで直すなら（最短ルート）
+GitHub Pagesで一番強いルールはこれです：
+
+✅ 公開する場所に index.html があること
+そして Pages の設定がその場所を指していること。
+
+チェックする場所
+GitHub → Settings → Pages の
+Build and deployment を見てください。
+
+Source: GitHub Actions になってる → そのままでOK
+
+Source: Deploy from a branch の場合
+
+Branch: main
+
+Folder: / (root) か /docs
+
+ここがズレると、ファイルがあっても404になります。
+
+「新しいリポジトリ作った方がいい」判断基準
+作らない方がいい（修理でOK）
+Actionsが成功してる（あなたは#38成功してる）
+
+ルートに index.html がある（または docs にあるのが分かってる）
+
+→ だいたい Pages設定のズレ or キャッシュ なので直せます。
+
+作った方が早い（引っ越しが楽）
+フォルダ構成がぐちゃぐちゃで、どれが本番のindexか分からない
+
+何度も触って「どれが効いてるか」迷子になってる
+
+もうこのリポジトリは実験場にして、スッキリした本番が欲しい
+
+→ この場合、新規はストレス減ります。
+
+もし新しいリポジトリでやるなら（失敗しない手順）
+これで 404になりにくい です。
+
+新規リポジトリ名：例 tango-arcade（半角英数が安全）
+
+index.html を 必ずリポジトリの一番上（root） に置く
+（あなたの v14 を index.html にしてアップ）
+
+同じ階層に .nojekyll（空ファイル） を追加
+→ 余計なビルド事故を減らす
+
+Settings → Pages
+
+Source: Deploy from a branch
+
+Branch: main
+
+Folder: / (root)
+
+表示URL：https://to-mo8.github.io/tango-arcade/
+
+これで「置いたら出る」状態になります。
+
+いちばん早く片付く提案
+新規リポジトリ作らずに直すのが最短なので、これだけ教えて：
+
+👉 あなたのリポジトリの Settings → Pages の画面スクショを1枚送って。
+（Build and deployment が見えるところ）
+
+それだけで「どこがズレて404なのか」即答できます。
+もしそこでややこしければ、その場で「じゃあ新規で行こう」と切り替えるのが一番早いです。
+
+あなた:
+もうダメ化も
+ChatGPT:
+大丈夫、ここから立て直せます。いま「ダメかも」って感じるのは、たぶん 404の原因が“1個だけ”なのに、どこが効いてるか見えなくなってるからです。
+なので、迷路を燃やして一本道にします🔥
+
+最短で復活させる「やること3つ」だけ
+① 新しいリポジトリを作る（これが一番確実）
+名前は 半角英数が安全です（例：tango-arcade）。
+（漢字や記号や長い名前は、後で混乱しやすい）
+
+② v14を index.html としてアップする
+さっき渡したこれを使って👇
+tangojuku_arcade_v14_smaller_top_panel.html
+
+アップしたら、GitHub上でファイル名を index.html にする
+（重要：index.html じゃないとトップURLで出ないことが多い）
+
+③ Pages を “main / root” で公開にする
+GitHub → Settings → Pages
+
+Source: Deploy from a branch
+
+Branch: main
+
+Folder: /(root)
+
+これでURLはこうなります：
+https://to-mo8.github.io/tango-arcade/
+
+ここで9割の人がつまずくポイント（先に潰す）
+Actions を見なくてOK（今回は branch deploy で十分）
+
+URLにファイル名を付けない（基本はフォルダのURLだけ）
+
+✅ .../tango-arcade/
+
+❌ .../tango-arcade/index.html（動くけど混乱の元）
+
+もし「新規リポジトリ作るのも不安」なら
+今の画面を1枚でいいから送ってください：
+
+Settings → Pages の画面スクショ
+
+それがあれば「ここをこう押す」だけを番号で指示します。
+（質問攻めにしない、一本道案内でいきます）
+
+どっちで行く？
+A：新規リポジトリで復活（確実）
+B：今のリポジトリを修理（最短）
+
+あなた:
+今のリポジトリを修理（最短）ではないと思codexにもやってもらってるけど一向になおらない
+ChatGPT:
+
+思考時間: 19s
+うん、それなら判断は正しいです。CODEXが迷子になるパターン、GitHub Pagesは特に多いです（“動いてるのに404”が一番イヤなやつ）。
+
+でも 「新しいリポジトリ」じゃなくても、今のリポジトリは人力で復旧できます。
+ここからは「最短」じゃなくて **“確実に復旧する一本道”**を置きます。これだけやれば戻ります。
+
+✅ 一本道の修理手順（この順番でやる）
+1) まず「公開方式」を固定する（ここがブレると永遠に迷う）
+GitHub のリポジトリで
+
+Settings → Pages を開く
+
+A. いったんこれにする（最も単純で壊れにくい）
+Build and deployment
+
+Source: Deploy from a branch
+
+Branch: main
+
+Folder: /(root)
+
+これで “Actionsの成功/失敗” に振り回されにくくなります。
+
+2) ルートに「index.html」を必ず置く（ここが無いと404）
+Code（ファイル一覧） に戻って、リポジトリ一番上に
+
+index.html
+
+があるか確認。
+
+無ければ作る（確実）
+Add file → Create new file
+
+ファイル名：index.html
+
+中身：私が渡した v14 の中身を丸ごと貼る
+
+Commit
+
+※ tangojuku_arcade_v14_....html みたいな名前で置くと、トップURLでは出ないので混乱しやすいです。トップは index.html が王様。
+
+3) Jekyllを止める（地味に404/ビルド事故を減らす）
+同じ場所（ルート）に .nojekyll を作ります。
+
+Add file → Create new file
+
+ファイル名：.nojekyll
+
+中身は空でOK
+
+Commit
+
+4) 公開URLはこれだけを使う（ファイル名URLは捨てる）
+復旧確認はこれだけ：
+
+https://to-mo8.github.io/TANGOJYUKU-AKEDO/
+
+キャッシュ回避したい時だけ
+
+https://to-mo8.github.io/TANGOJYUKU-AKEDO/?v=999
+
+※ ...?v=14 で 404にはなりません。404になるのは「パスが存在しない」ときなので、原因はほぼ index.htmlの置き場所 or Pages設定です。
+
+🔥 それでも404のときの“ほぼ確定原因”
+原因1：PagesのFolderが /(root) じゃなくて /docs になってる
+→ その場合は docsフォルダの中に index.html が必要です。
+
+対策はどっちか1つ：
+
+Settings → Pages を /(root) に戻す
+または
+
+docs/index.html を作って、Folderを /docs にする
+
+迷わないためにおすすめは /(root) です。
+
+原因2：公開ブランチがmainじゃなくてmaster
+Code画面で上のブランチ名が main か master か確認。
+違ってたら Pages の Branch を合わせます。
+
+✅ ここまでやれば99%直る
+そして、CODEXに任せるより早いです。操作が少ないから。
+
+次に必要なのは「1枚だけ」
+あなたはもう十分頑張ってるので、追加質問で疲れさせたくない。
+だからこれだけ送ってください：
+
+👉 Settings → Pages の画面スクショ（Source/Branch/Folderが写ってるやつ）
+
+それを見れば、「今どこがズレてるか」を一発で指差して、押す場所を番号で案内します。
+
+あなた:
+画像をアップロードしました
+これがでてきた
+ChatGPT:
+それ、GitHubのエラーじゃなくて ChatGPT 側の表示です。
+
+赤い帯の
+「コード インタープリターのセッションの有効期限が切れました」
+は「このチャット内で動かしてた“コード実行”の作業場が時間切れで閉じたよ」という意味です。
+
+なので ✅ あなたのゲーム（GitHub Pages）やリポジトリが壊れたわけではありません。
+
+今すぐできる対処（どれか1つでOK）
+1) いちばん簡単
+ブラウザで ページ更新（F5 / Ctrl+R） して、もう一度このチャットを開く。
+
+2) それでも消えないとき
+右上の 再読み込み、または タブを閉じて開き直す。
+
+3) 作業を続けたいとき（ファイル系）
+もし「HTMLファイルを渡して修正版を作る」みたいな作業を続けるなら、
+もう一度 v14 のHTMLファイルをこのチャットに貼る or アップすれば再開できます。
+
+大事なポイント
+この表示は「ChatGPTの作業場が閉じた」だけなので、
+GitHub の Pages 修理とは別問題です。
+
+で、次はどうする？
+いま一番詰まってるのは GitHub Pagesの404 でしたよね。
+
+次の1手だけ教えてください（最短で原因確定できます）👇
+**「404が出た時のURL」**を、そのままコピペで送ってください。
+（https://... 全部）
+
+それを見れば「index.htmlの場所が違う」のか「Pagesの公開元が違う」のか、ズバッと特定して手順を1本にします。
+
+あなた:
+tangojuku_arcade_v14_smaller_top_panel.htmlがひらけないです
+ChatGPT:
+OK、これは原因がハッキリしてます。
+
+**tangojuku_arcade_v14_smaller_top_panel.html** が開けないのは、ほぼ100%👇のどっちかです。
+
+パターンA：それは「あなたのGitHubに存在してない」ので開けない（404）
+このファイル名で開こうとしても、GitHubリポジトリにそのファイルをアップしてなければ開けません。
+
+✅ 解決方法は2択です（おすすめは①）
+
+①おすすめ：中身を index.html に上書きする（URLが変わらない）
+GitHubで TANGOJYUKU-AKEDO リポジトリを開く
+
+index.html を開く
+
+✏️（編集）
+
+中身を全部消す
+
+v14 のHTML全文を貼り付け
+
+Commit（保存）
+
+これで開く
+https://to-mo8.github.io/TANGOJYUKU-AKEDO/?v=14
+
+②ファイルとして置く：その名前でアップロードする
+リポジトリのトップ（index.htmlがある場所）で
+Add file → Upload files
+
+tangojuku_arcade_v14_smaller_top_panel.html をアップ
+
+Commit
+
+これで開く
+https://to-mo8.github.io/TANGOJYUKU-AKEDO/tangojuku_arcade_v14_smaller_top_panel.html
+
+パターンB：そのファイルは「ChatGPTが渡したダウンロード用」なので、まずPCに保存が必要
+このチャットで渡したリンク（sandbox:〜）は、あなたのPC/スマホに保存してからじゃないとブラウザで開けません。
+
+まずやること
+ここをクリックして ダウンロードする
+（前に渡した v14 のリンク）
+
+ダウンロードしたら、
+
+PCならダウンロードフォルダでダブルクリック
+
+もしくはGitHubにアップロード（上の①か②）
+
+いま確認したいこと（1個だけ）
+あなたは今、どっちをやろうとしてますか？
+
+(1) GitHub Pagesで公開したい（サイトで開きたい）
+→ なら index.html に上書き（①） が確実
+
+(2) 自分のPC/スマホで一旦開いて確認したい（ローカルで開く）
+→ なら まずダウンロードが必要
+
+すぐ特定できるので、これだけ返して
+「開けない」って出るのは どの画面ですか？
+
+A) スマホで to-mo8.github.io/... を開いたら404
+B) ChatGPTの青いリンク（sandbox）を押したら開けない
+C) GitHubのファイル一覧でその名前が見つからない
+
+A/B/C のどれか一文字でOK。
+それに合わせて、押す場所を番号で一本道案内します。
+
+あなた:
+ひらこうとしたらさっきのあかじがでたの
+ChatGPT:
+
+思考時間: 34s
+それは大丈夫。あの赤字（「コードインタープリターのセッション期限」）はChatGPT側の注意表示で、HTMLが壊れてる/開けない とは別物です。
+ただ、そこで混乱しやすいので、もう 「リンクで開く」じゃなく、GitHubの index.html を直接この中身に置き換える方法で確実にいきましょう。
+
+✅ いまからやること（これだけ）
+GitHubで TANGOJYUKU-AKEDO リポジトリを開く
+
+index.html を開く
+
+✏️（編集）
+
+中身を 全部消す
+
+下のHTMLを 全部コピペ
+
+Commit changes（保存）
+
+スマホで開く：
+https://to-mo8.github.io/TANGOJYUKU-AKEDO/?v=14
+
+ついでに安定化（おすすめ）
+同じ場所（リポジトリの一番上）に .nojekyll という空ファイルを作ってCommitすると、Pagesの変な事故が減ります。
+
+✅ 置き換え用 v14 HTML（全部コピペ）
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>単語塾アーケード（落下ワード）</title>
+<style>
+  :root{
+    --bg:#0b1020; --card:#121a33; --ink:#e8eeff; --muted:#a9b3d6;
+    --good:#38d996; --bad:#ff5c7a; --warn:#ffc66c;
+    --line:rgba(255,255,255,.12);
+    --shadow: 0 10px 24px rgba(0,0,0,.35);
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
+    background: radial-gradient(1200px 800px at 20% 10%, #1a2a66 0%, #0b1020 55%, #070a14 100%);
+    color:var(--ink);
+    overflow-x:hidden;
+  }
+  a{color:inherit}
+
+  /* --- Mobile safe-area / dynamic viewport fixes (top cut-off prevention) --- */
+  :root{
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+  }
+  /* Keep content away from notch/status bar while allowing header background to extend */
+  header{
+    padding-top: calc(14px + var(--sat));
+  }
+  /* Overlays should also respect safe area */
+  .overlay{
+    padding-top: calc(16px + var(--sat));
+    padding-bottom: calc(16px + var(--sab));
+  }
+  /* Use dynamic viewport units on mobile to avoid URL bar cropping */
+  #stageWrap{height: min(62vh, 520px); height: min(62dvh, 520px);}
+  @media (max-width:520px){
+    #stageWrap{height: min(62vh, 460px); height: min(62dvh, 460px);}
+  }
+
+  header{
+    position:sticky; top:0; z-index:10;
+    background: linear-gradient(180deg, rgba(11,16,32,.92) 0%, rgba(11,16,32,.66) 70%, rgba(11,16,32,0) 100%);
+    backdrop-filter: blur(10px);
+    padding:14px 16px 12px;
+  }
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .title{display:flex; gap:10px; align-items:center; flex:1}
+  .title h1{
+    margin:0; font-size:20px; letter-spacing:.2px; font-weight:800;
+  }
+  .tag{
+    font-size:12px; color:var(--muted); border:1px solid var(--line); padding:6px 10px; border-radius:999px;
+    background: rgba(255,255,255,.04);
+  }
+  .btn{
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.05);
+    color:var(--ink);
+    padding:10px 12px;
+    border-radius:14px;
+    cursor:pointer;
+    font-weight:700;
+  }
+  .btn:hover{background: rgba(255,255,255,.08)}
+  .btn.primary{
+    background: linear-gradient(180deg, rgba(56,217,150,.28), rgba(56,217,150,.10));
+    border-color: rgba(56,217,150,.35);
+  }
+  .btn.danger{
+    background: linear-gradient(180deg, rgba(255,92,122,.26), rgba(255,92,122,.10));
+    border-color: rgba(255,92,122,.35);
+  }
+  .btn.small{padding:8px 10px; font-size:13px; border-radius:12px}
+  .btn:disabled{opacity:.45; cursor:not-allowed}
+
+  main{padding:12px 16px 20px; max-width:920px; margin:0 auto}
+  .grid{
+    display:grid;
+    grid-template-columns: 1.4fr .9fr;
+    gap:12px;
+    align-items:start;
+  }
+  @media (max-width: 860px){
+    .grid{grid-template-columns:1fr}
+  }
+  .card{
+    background: rgba(18,26,51,.72);
+    border:1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+  .card .hd{
+    padding:12px 14px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background: rgba(255,255,255,.03);
+  }
+  .card .bd{padding:14px}
+  .muted{color:var(--muted)}
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+
+  .hud{display:flex; gap:10px; flex-wrap:wrap}
+  .pill{
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.04);
+    padding:10px 12px; border-radius:999px;
+    display:flex; align-items:center; gap:8px;
+    min-height:40px;
+  }
+  .pill strong{font-size:12px; color:var(--muted); letter-spacing:.2px}
+  .pill span{font-weight:800}
+  .pill.meter{gap:10px}
+  .bar{
+    width:220px; max-width:40vw;
+    height:10px; border-radius:999px; background: rgba(255,255,255,.10);
+    overflow:hidden; border:1px solid rgba(255,255,255,.08);
+  }
+  .bar > i{
+    display:block; height:100%;
+    background: linear-gradient(90deg, rgba(56,217,150,.95), rgba(255,198,108,.95), rgba(255,92,122,.95));
+    width: 0%;
+  }
+
+  /* Stage */
+  #stageWrap{
+    position:relative;
+    background: radial-gradient(900px 400px at 50% 40%, rgba(255,255,255,.06) 0%, rgba(255,255,255,0) 70%);
+    border:1px solid var(--line);
+    border-radius: 18px;
+    overflow:hidden;
+    height: min(60dvh, 560px);
+  }
+  canvas{display:block; width:100%; height:100%}
+  #stageOverlay{
+    position:absolute; inset:0;
+    pointer-events:none;
+    display:flex; align-items:center; justify-content:center;
+    color: rgba(255,255,255,.9);
+    font-weight:900;
+    text-shadow: 0 10px 30px rgba(0,0,0,.6);
+    font-size: clamp(18px, 4vw, 34px);
+    opacity:0;
+    transition: opacity .18s ease;
+  }
+  #stageOverlay.show{opacity:1}
+
+  /* Answers */
+  .answers{
+    display:grid; grid-template-columns: 1fr;
+    gap:10px;
+  }
+  .choice{
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.04);
+    border-radius: 16px;
+    padding:12px 12px;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    min-height:52px;
+  }
+  .choice:hover{background: rgba(255,255,255,.07)}
+  .choice b{font-size:14px}
+  .choice small{color:var(--muted); font-weight:700}
+  .choice.correct{border-color: rgba(56,217,150,.6); background: rgba(56,217,150,.10)}
+  .choice.wrong{border-color: rgba(255,92,122,.6); background: rgba(255,92,122,.10)}
+
+  /* Typing */
+  .typingBox{
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.04);
+    border-radius: 16px;
+    padding:12px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .typingRow{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .input{
+    flex:1;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(0,0,0,.25);
+    color: var(--ink);
+    border-radius: 12px;
+    padding: 12px 12px;
+    font-size: 18px;
+    outline:none;
+    min-width: 160px;
+  }
+  .hint{
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .progressHint{
+    display:flex; gap:8px; flex-wrap:wrap;
+  }
+  .chip{
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.04);
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-weight:800;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .chip.ok{border-color: rgba(56,217,150,.45); color: rgba(56,217,150,.95); background: rgba(56,217,150,.08)}
+  .chip.no{border-color: rgba(255,92,122,.45); color: rgba(255,92,122,.95); background: rgba(255,92,122,.08)}
+
+  /* Overlays */
+  .overlay{
+    position:fixed; inset:0;
+    background: rgba(0,0,0,.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+    z-index:50;
+  }
+  .overlay.show{display:flex}
+  .modal{
+    width:min(720px, 96vw);
+    max-height: min(84vh, 720px);
+    overflow:auto;
+    background: rgba(18,26,51,.92);
+    border:1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+  }
+  .modal .hd{position:sticky; top:0; background: rgba(18,26,51,.95)}
+  .modal .bd{padding:14px}
+
+  /* --- Mobile layout fixes: prevent "can't play because header eats screen" --- */
+  html, body{ max-width: 100%; overflow-x:hidden; }
+  @media (max-width: 520px){
+    header{ padding: 10px 12px; }
+    header .title h1{ font-size: 18px; line-height:1.15; }
+    header .title .tag{ font-size: 12px; padding: 6px 10px; }
+    .hud{ gap:8px; flex-wrap:wrap; }
+    .pill{ padding:10px 12px; }
+    #btnStart{ padding: 12px 14px; }
+    main{ padding: 10px; }
+    .card .hd{ padding: 10px 12px; }
+    .card .bd{ padding: 10px 12px; }
+  }
+
+  /* --- Mobile: give more room to the stage by compacting controls/answers --- */
+  #answerArea{ margin-top: 8px; }
+  @media (max-width: 520px){
+    /* Put 4 choices in 2 columns to save vertical space */
+    .answers{ grid-template-columns: 1fr 1fr !important; gap: 8px; }
+    .choice{ padding: 10px 10px; min-height: 46px; border-radius: 14px; }
+    .choice b{ font-size: 13px; }
+    .choice small{ font-size: 10px; }
+    /* Compact the pills and small buttons row */
+    .pill{ padding: 8px 10px; }
+    .btn.small{ padding: 8px 10px; }
+  }
+  @media (max-width: 340px){
+    .answers{ grid-template-columns: 1fr !important; }
+  }
+
+  /* --- Mobile: shrink the top header panel to free the stage area --- */
+  @media (max-width: 520px){
+    header{ padding-top: calc(8px + var(--sat)); padding-left:10px; padding-right:10px; padding-bottom:8px; }
+    header .row{ gap:8px; }
+    header .title h1{ font-size: 16px; line-height:1.12; }
+    header .title .tag{ display:none; } /* tag line takes vertical space */
+    #btnHelp, #btnSettings{ padding: 6px 10px; font-size: 12px; border-radius: 12px; }
+    /* Less vertical gaps between header blocks */
+    header .row[style*="margin-top"]{ margin-top: 6px !important; }
+
+    /* Pills become compact */
+    .pill{ padding: 6px 8px; border-radius: 14px; }
+    .pill strong{ font-size: 11px; }
+    .pill span{ font-size: 11px; }
+    .pill.meter .bar{ height: 8px; }
+    .pill.meter{ gap:6px; }
+
+    /* Hide CSV pill on small screens (still accessible via settings) */
+    #pillCsv{ display:none; }
+
+    /* Reduce button sizes */
+    #btnStart, #btnPause, #btnRestart{ padding: 8px 10px; font-size: 12px; border-radius: 14px; }
+
+    /* Hide pause/restart while disabled to keep header short before starting */
+    #btnPause:disabled, #btnRestart:disabled{ display:none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <div class="title">
+      <h1>単語塾アーケード（落下ワード）</h1>
+      <div class="tag">CSV対応 / コンボ / ボス復習</div>
+    </div>
+    <button class="btn small" id="btnHelp">使い方</button>
+    <button class="btn small" id="btnSettings">設定</button>
+  </div>
+
+  <div class="row" style="margin-top:10px">
+    <div class="hud">
+      <div class="pill"><strong>スコア</strong><span id="hudScore">0</span></div>
+      <div class="pill"><strong>コンボ</strong><span id="hudCombo">0</span></div>
+      <div class="pill"><strong>命中</strong><span id="hudAcc">0%</span></div>
+      <div class="pill" id="pillCsv"><strong>CSV</strong><span id="hudCsv" class="mono">内蔵サンプル</span></div>
+      <div class="pill meter"><strong>HP</strong>
+        <div class="bar"><i id="hpBar"></i></div>
+        <span id="hudHp" class="mono">5/5</span>
+      </div>
+    </div>
+    <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap">
+      <button class="btn primary" id="btnStart">スタート</button>
+      <button class="btn" id="btnPause" disabled>一時停止</button>
+      <button class="btn danger" id="btnRestart" disabled>リスタート</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="grid">
+    <div class="card">
+      <div class="hd">
+        <div class="row">
+          <div class="pill"><strong>モード</strong><span id="hudMode">4択</span></div>
+          <div class="pill"><strong>ターゲット</strong><span id="hudTarget">-</span></div>
+        </div>
+        <div class="row">
+          <button class="btn small" id="btnSpeak">🔊 発音</button>
+          <button class="btn small" id="btnSkip">スキップ</button>
+        </div>
+      </div>
+      <div class="bd">
+        <div id="stageWrap">
+          <canvas id="cv" width="900" height="520"></canvas>
+          <div id="stageOverlay">READY</div>
+        </div>
+
+        <div id="answerArea">
+          <div id="answers4" class="answers" style="margin-top:12px">
+            <div class="choice" data-i="0"><b id="c0">-</b><small class="mono">1</small></div>
+            <div class="choice" data-i="1"><b id="c1">-</b><small class="mono">2</small></div>
+            <div class="choice" data-i="2"><b id="c2">-</b><small class="mono">3</small></div>
+            <div class="choice" data-i="3"><b id="c3">-</b><small class="mono">4</small></div>
+          </div>
+
+          <div id="typingBox" class="typingBox" style="display:none; margin-top:12px">
+            <div class="typingRow">
+              <input id="typeInput" class="input" placeholder="英語でタイプ…" autocomplete="off" spellcheck="false" />
+              <button class="btn primary" id="btnSubmit">決定</button>
+              <button class="btn" id="btnGiveUp">あきらめ</button>
+            </div>
+            <div class="hint" id="hintText">ヒント：10秒後に先頭 / 25秒後に末尾</div>
+            <div class="progressHint" id="progressHint"></div>
+          </div>
+        </div>
+
+        <div class="muted" style="margin-top:10px; font-size:13px">
+          落ちてくる単語に対して、正しい意味を選ぶと撃ち落とせます。正解でコンボUP、ミスでHP減。間違えた単語は「復習語」としてプールされ、一定数進むとボスとして再登場します 🐍📚
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hd">
+        <strong>ランキング</strong>
+        <span class="muted" style="font-size:12px">（端末内）</span>
+      </div>
+      <div class="bd" style="padding:0">
+        <div id="rankWrap" style="max-height:520px; overflow:auto; padding:14px">
+          <div class="muted">プレイ後に表示されます。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Help Modal -->
+<div class="overlay" id="ovHelp">
+  <div class="modal">
+    <div class="hd card">
+      <div class="hd">
+        <strong>使い方</strong>
+        <button class="btn small" id="closeHelp">閉じる</button>
+      </div>
+      <div class="bd">
+        <ul>
+          <li>4択：落下中の単語に対して正しい意味を選んで撃破。</li>
+          <li>タイピング：日本語が落ちてきたら英語でタイプ（3〜5文字中心）。</li>
+          <li>ミスでHP減。間違えた単語は復習プールに入り、ボスとして再登場。</li>
+          <li>発音ボタンで単語読み上げ。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="overlay" id="ovSettings">
+  <div class="modal">
+    <div class="hd card">
+      <div class="hd">
+        <strong>設定</strong>
+        <button class="btn small" id="closeSettings">閉じる</button>
+      </div>
+      <div class="bd">
+        <div style="display:grid; grid-template-columns:1fr; gap:12px">
+          <div class="typingRow" style="justify-content:space-between">
+            <div><b>モード</b><div class="muted" style="font-size:12px">4択 / タイピング</div></div>
+            <select id="selMode" class="input" style="max-width:220px; font-size:16px; padding:10px">
+              <option value="mc">4択</option>
+              <option value="type">タイピング</option>
+            </select>
+          </div>
+
+          <div class="typingRow" style="justify-content:space-between">
+            <div><b>データ</b><div class="muted" style="font-size:12px">CSV読み込み or 内蔵</div></div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
+              <input type="file" id="fileCsv" accept=".csv,text/csv" class="btn small" style="padding:10px 12px" />
+              <button class="btn small" id="btnUseBuiltIn">内蔵サンプル</button>
+            </div>
+          </div>
+
+          <div class="typingRow" style="justify-content:space-between">
+            <div><b>音声</b><div class="muted" style="font-size:12px">英語（en-US推奨）</div></div>
+            <select id="selVoice" class="input" style="max-width:220px; font-size:16px; padding:10px">
+              <option value="en-US">en-US</option>
+              <option value="en-GB">en-GB</option>
+              <option value="en-AU">en-AU</option>
+            </select>
+          </div>
+
+          <div class="typingRow" style="justify-content:space-between">
+            <div><b>スピード</b><div class="muted" style="font-size:12px">落下速度</div></div>
+            <input id="rngSpeed" type="range" min="0.8" max="2.0" step="0.05" value="1.15" style="width:240px">
+          </div>
+
+          <div class="typingRow" style="justify-content:space-between">
+            <div><b>難易度</b><div class="muted" style="font-size:12px">出題の厳しさ</div></div>
+            <input id="rngHard" type="range" min="0" max="2" step="1" value="1" style="width:240px">
+          </div>
+
+          <div class="typingRow" style="justify-content:space-between">
+            <div><b>デバッグ表示</b><div class="muted" style="font-size:12px">表示情報</div></div>
+            <label style="display:flex; gap:8px; align-items:center">
+              <input type="checkbox" id="chkDebug">
+              <span class="muted">ON</span>
+            </label>
+          </div>
+
+          <div class="typingRow" style="justify-content:space-between">
+            <div><b>ランキング</b><div class="muted" style="font-size:12px">端末内保存</div></div>
+            <button class="btn small danger" id="btnClearRank">消去</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ----------------------------
+  // Mobile: fit stage to visible viewport (prevents "game screen is hidden")
+  // ----------------------------
+  const fitStageToViewport = () => {
+    const header = document.querySelector("header");
+    const stageWrap = document.querySelector("#stageWrap");
+    if(!header || !stageWrap) return;
+
+    // visualViewport is best on mobile (accounts for URL bar / keyboard)
+    const vv = window.visualViewport;
+    const vh = vv ? vv.height : window.innerHeight;
+
+    const headerH = header.getBoundingClientRect().height;
+
+    // Estimated non-stage vertical space inside the main card below stage (answer UI etc.)
+    // Keep it conservative so the stage stays comfortably visible.
+    const other = 190;
+
+    let avail = vh - headerH - other;
+
+    // Clamp stage height: not too tiny, not too huge
+    const h = Math.max(280, Math.min(680, Math.floor(avail)));
+
+    // Apply if it makes sense
+    if(Number.isFinite(h) && h > 0){
+      stageWrap.style.height = h + "px";
+    }
+  };
+
+  // Run on load + when viewport changes (URL bar, rotate, keyboard)
+  window.addEventListener("resize", fitStageToViewport, {passive:true});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize", fitStageToViewport, {passive:true});
+    window.visualViewport.addEventListener("scroll", fitStageToViewport, {passive:true});
+  }
+  fitStageToViewport();
+
+  // ----------------------------
+  // Small helpers
+  // ----------------------------
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand = (n) => Math.floor(Math.random() * n);
+
+  const stageWrap = $("#stageWrap");
+  const cv = $("#cv");
+  const ctx = cv.getContext("2d");
+  const overlay = $("#stageOverlay");
+
+  const hudScore = $("#hudScore");
+  const hudCombo = $("#hudCombo");
+  const hudAcc = $("#hudAcc");
+  const hudHp = $("#hudHp");
+  const hpBar = $("#hpBar");
+  const hudMode = $("#hudMode");
+  const hudTarget = $("#hudTarget");
+  const hudCsv = $("#hudCsv");
+
+  const btnStart = $("#btnStart");
+  const btnPause = $("#btnPause");
+  const btnRestart = $("#btnRestart");
+  const btnSpeak = $("#btnSpeak");
+  const btnSkip = $("#btnSkip");
+
+  const answers4 = $("#answers4");
+  const choiceEls = $$(".choice");
+
+  const typingBox = $("#typingBox");
+  const typeInput = $("#typeInput");
+  const btnSubmit = $("#btnSubmit");
+  const btnGiveUp = $("#btnGiveUp");
+  const hintText = $("#hintText");
+  const progressHint = $("#progressHint");
+
+  const ovHelp = $("#ovHelp");
+  const ovSettings = $("#ovSettings");
+  const btnHelp = $("#btnHelp");
+  const btnSettings = $("#btnSettings");
+  const closeHelp = $("#closeHelp");
+  const closeSettings = $("#closeSettings");
+
+  const selMode = $("#selMode");
+  const fileCsv = $("#fileCsv");
+  const btnUseBuiltIn = $("#btnUseBuiltIn");
+  const selVoice = $("#selVoice");
+  const rngSpeed = $("#rngSpeed");
+  const rngHard = $("#rngHard");
+  const chkDebug = $("#chkDebug");
+  const btnClearRank = $("#btnClearRank");
+  const rankWrap = $("#rankWrap");
+
+  // ----------------------------
+  // Data
+  // ----------------------------
+  const builtIn = [
+    {en:"cat", ja:"猫", lv:1},
+    {en:"dog", ja:"犬", lv:1},
+    {en:"book", ja:"本", lv:1},
+    {en:"milk", ja:"牛乳", lv:1},
+    {en:"rain", ja:"雨", lv:1},
+    {en:"door", ja:"ドア", lv:1},
+    {en:"fish", ja:"魚", lv:1},
+    {en:"cake", ja:"ケーキ", lv:1},
+    {en:"cold", ja:"寒い", lv:1},
+    {en:"blue", ja:"青", lv:1},
+    {en:"train", ja:"電車", lv:1},
+    {en:"school", ja:"学校", lv:1},
+    {en:"apple", ja:"りんご", lv:1},
+    {en:"bread", ja:"パン", lv:1},
+    {en:"chair", ja:"いす", lv:1},
+    {en:"house", ja:"家", lv:1},
+    {en:"happy", ja:"うれしい", lv:1},
+    {en:"sleep", ja:"寝る", lv:1},
+    {en:"drink", ja:"飲む", lv:1},
+    {en:"write", ja:"書く", lv:1},
+  ];
+
+  let dataset = builtIn.slice();
+  let datasetLabel = "内蔵サンプル";
+
+  // ----------------------------
+  // Game state
+  // ----------------------------
+  const STATE = {
+    running:false,
+    paused:false,
+    tPrev:0,
+    score:0,
+    combo:0,
+    hits:0,
+    shots:0,
+    hpMax:5,
+    hp:5,
+    speed:1.15,
+    hard:1,
+    mode:"mc", // "mc" or "type"
+    current:null, // current question
+    choices:[],
+    fallY:-60,
+    fallV:120,
+    missCount:0,
+    wrongStreak:0,
+    wrongPool:[],
+    bossEvery:12,
+    qCount:0,
+    lastIdx:-1
+  };
+
+  // ----------------------------
+  // Layout / canvas resize
+  // ----------------------------
+  const resize = () => {
+    const r = stageWrap.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.floor(r.width * dpr);
+    cv.height = Math.floor(r.height * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  };
+  window.addEventListener("resize", () => { resize(); fitStageToViewport(); }, {passive:true});
+  resize();
+
+  // ----------------------------
+  // Speech
+  // ----------------------------
+  const speak = (text) => {
+    try{
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = selVoice.value || "en-US";
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  };
+
+  // ----------------------------
+  // CSV parse
+  // ----------------------------
+  const parseCSV = (txt) => {
+    const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    // Accept headers: en,ja,lv or English,Japanese,Level etc.
+    const out = [];
+    for(let i=0;i<lines.length;i++){
+      const line = lines[i];
+      if(i===0 && /en|english/i.test(line) && /ja|japanese/i.test(line)){
+        continue;
+      }
+      // very simple CSV split (supports quoted commas minimally)
+      const cols = [];
+      let cur="", inq=false;
+      for(let c=0;c<line.length;c++){
+        const ch=line[c];
+        if(ch === '"'){ inq = !inq; continue; }
+        if(ch === "," && !inq){
+          cols.push(cur.trim());
+          cur="";
+        }else cur += ch;
+      }
+      cols.push(cur.trim());
+      const en = (cols[0]||"").trim();
+      const ja = (cols[1]||"").trim();
+      const lv = Number(cols[2]||0) || 0;
+      if(en && ja) out.push({en,ja,lv});
+    }
+    return out;
+  };
+
+  // ----------------------------
+  // Question generation
+  // ----------------------------
+  const pickIndex = () => {
+    const n = dataset.length;
+    if(n<=1) return 0;
+    // avoid repeats
+    let idx = rand(n);
+    if(idx === STATE.lastIdx) idx = (idx+1) % n;
+    STATE.lastIdx = idx;
+    return idx;
+  };
+
+  const makeChoices = (correct) => {
+    const set = new Set([correct.ja]);
+    const arr = [correct.ja];
+    while(arr.length < 4){
+      const cand = dataset[rand(dataset.length)];
+      if(!cand) break;
+      if(set.has(cand.ja)) continue;
+      set.add(cand.ja);
+      arr.push(cand.ja);
+    }
+    // shuffle
+    for(let i=arr.length-1;i>0;i--){
+      const j = rand(i+1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  const nextQuestion = () => {
+    STATE.qCount++;
+
+    // Boss: pull from wrongPool sometimes
+    let q;
+    if(STATE.wrongPool.length && (STATE.qCount % STATE.bossEvery === 0)){
+      q = STATE.wrongPool[rand(STATE.wrongPool.length)];
+    }else{
+      q = dataset[pickIndex()];
+    }
+
+    STATE.current = q;
+    hudTarget.textContent = q.en;
+
+    STATE.fallY = -40;
+    STATE.fallV = 120 * STATE.speed;
+
+    if(STATE.mode === "mc"){
+      STATE.choices = makeChoices(q);
+      $("#c0").textContent = STATE.choices[0] || "-";
+      $("#c1").textContent = STATE.choices[1] || "-";
+      $("#c2").textContent = STATE.choices[2] || "-";
+      $("#c3").textContent = STATE.choices[3] || "-";
+    }else{
+      // typing mode: show Japanese falling, answer is English typed
+      // target label in header becomes Japanese
+      hudTarget.textContent = q.ja;
+      typeInput.value = "";
+      typeInput.focus();
+      STATE.missCount = 0;
+      updateTypingProgress("");
+    }
+
+    showOverlay("READY", 250);
+  };
+
+  const showOverlay = (msg, ms=250) => {
+    overlay.textContent = msg;
+    overlay.classList.add("show");
+    setTimeout(()=>overlay.classList.remove("show"), ms);
+  };
+
+  // ----------------------------
+  // HUD
+  // ----------------------------
+  const updateHud = () => {
+    hudScore.textContent = STATE.score;
+    hudCombo.textContent = STATE.combo;
+    const acc = STATE.shots ? Math.round((STATE.hits / STATE.shots) * 100) : 0;
+    hudAcc.textContent = acc + "%";
+    hudHp.textContent = `${STATE.hp}/${STATE.hpMax}`;
+    hpBar.style.width = `${Math.round((STATE.hp/STATE.hpMax)*100)}%`;
+    hudMode.textContent = STATE.mode === "mc" ? "4択" : "タイピング";
+    hudCsv.textContent = datasetLabel;
+  };
+
+  const damage = () => {
+    STATE.hp = clamp(STATE.hp - 1, 0, STATE.hpMax);
+    STATE.combo = 0;
+    STATE.wrongStreak++;
+    if(STATE.hp<=0){
+      gameOver();
+    }else{
+      showOverlay("MISS", 220);
+    }
+    updateHud();
+  };
+
+  const healReset = () => {
+    STATE.hp = STATE.hpMax;
+    STATE.combo = 0;
+    STATE.score = 0;
+    STATE.hits = 0;
+    STATE.shots = 0;
+    STATE.qCount = 0;
+    STATE.wrongStreak = 0;
+    STATE.wrongPool = [];
+    updateHud();
+  };
+
+  // ----------------------------
+  // Ranking (local)
+  // ----------------------------
+  const RANK_KEY = "tango_rank_v11";
+  const loadRank = () => {
+    try{
+      return JSON.parse(localStorage.getItem(RANK_KEY) || "[]");
+    }catch(e){ return []; }
+  };
+  const saveRank = (arr) => {
+    try{ localStorage.setItem(RANK_KEY, JSON.stringify(arr)); }catch(e){}
+  };
+  const renderRank = () => {
+    const arr = loadRank();
+    if(!arr.length){
+      rankWrap.innerHTML = `<div class="muted">まだ記録がありません。</div>`;
+      return;
+    }
+    const html = arr.map((r,i)=>`
+      <div class="pill" style="border-radius:14px; margin-bottom:10px; justify-content:space-between">
+        <span><strong>#${i+1}</strong> <span class="mono">${r.mode}</span></span>
+        <span><b>${r.score}</b> <span class="muted" style="font-size:12px">${new Date(r.t).toLocaleString()}</span></span>
+      </div>
+    `).join("");
+    rankWrap.innerHTML = html;
+  };
+
+  const pushRank = () => {
+    const arr = loadRank();
+    arr.push({score:STATE.score, mode: STATE.mode==="mc"?"4択":"タイプ", t: Date.now()});
+    arr.sort((a,b)=>b.score-a.score);
+    arr.splice(20);
+    saveRank(arr);
+    renderRank();
+  };
+
+  // ----------------------------
+  // Typing hint system
+  // ----------------------------
+  let hintTimerA=null, hintTimerB=null;
+  const clearHintTimers = () => {
+    if(hintTimerA) clearTimeout(hintTimerA);
+    if(hintTimerB) clearTimeout(hintTimerB);
+    hintTimerA = hintTimerB = null;
+  };
+
+  const updateTypingProgress = (typed) => {
+    const ans = (STATE.current?.en || "").toLowerCase();
+    const t = (typed || "").toLowerCase();
+    const chips = [];
+
+    if(ans){
+      // show per-position correctness for typed characters
+      for(let i=0;i<Math.min(ans.length, t.length);i++){
+        const ok = ans[i] === t[i];
+        chips.push(`<span class="chip ${ok?'ok':'no'}">${i+1}文字目:${ok?'OK':'×'}</span>`);
+      }
+    }
+    progressHint.innerHTML = chips.join("");
+  };
+
+  const scheduleHints = () => {
+    clearHintTimers();
+    hintText.textContent = "ヒント：10秒後に先頭 / 25秒後に末尾";
+    hintTimerA = setTimeout(()=>{
+      const ans = STATE.current?.en || "";
+      if(!ans) return;
+      hintText.textContent = `ヒント：先頭は「${ans[0]}」`;
+    }, 10000);
+    hintTimerB = setTimeout(()=>{
+      const ans = STATE.current?.en || "";
+      if(!ans) return;
+      hintText.textContent = `ヒント：末尾は「${ans[ans.length-1]}」`;
+    }, 25000);
+  };
+
+  // ----------------------------
+  // Game loop
+  // ----------------------------
+  const draw = () => {
+    const w = stageWrap.clientWidth;
+    const h = stageWrap.clientHeight;
+
+    ctx.clearRect(0,0,w,h);
+
+    // grid background
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = "rgba(255,255,255,.12)";
+    const step = 40;
+    for(let x=0;x<w;x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+    for(let y=0;y<h;y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+    ctx.restore();
+
+    if(!STATE.current) return;
+
+    // falling item
+    const text = (STATE.mode==="mc") ? STATE.current.en : STATE.current.ja;
+    const boxW = Math.min(320, w-40);
+    const boxH = 56;
+    const x = (w - boxW)/2;
+    const y = STATE.fallY;
+
+    // box
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,.08)";
+    ctx.strokeStyle = "rgba(255,255,255,.18)";
+    roundRect(ctx, x, y, boxW, boxH, 16);
+    ctx.fill();
+    ctx.stroke();
+
+    // text
+    ctx.fillStyle = "rgba(255,255,255,.95)";
+    ctx.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, w/2, y + boxH/2);
+    ctx.restore();
+  };
+
+  const roundRect = (c, x,y,w,h,r) => {
+    c.beginPath();
+    c.moveTo(x+r, y);
+    c.arcTo(x+w, y, x+w, y+h, r);
+    c.arcTo(x+w, y+h, x, y+h, r);
+    c.arcTo(x, y+h, x, y, r);
+    c.arcTo(x, y, x+w, y, r);
+    c.closePath();
+  };
+
+  const step = (t) => {
+    if(!STATE.running){ draw(); return; }
+    if(STATE.paused){ requestAnimationFrame(step); return; }
+
+    const dt = (t - STATE.tPrev) / 1000 || 0;
+    STATE.tPrev = t;
+
+    // fall
+    STATE.fallY += STATE.fallV * dt;
+
+    // miss bottom?
+    if(STATE.fallY > stageWrap.clientHeight - 70){
+      // in typing: count misses and reveal answer after 3
+      if(STATE.mode==="type"){
+        STATE.missCount++;
+        if(STATE.missCount >= 3){
+          // treat as wrong, add to pool, go next
+          addWrongPool(STATE.current);
+          damage();
+          nextQuestion();
+          scheduleHints();
+        }else{
+          damage();
+          // keep same question but reset fall
+          STATE.fallY = -40;
+        }
+      }else{
+        addWrongPool(STATE.current);
+        damage();
+        nextQuestion();
+      }
+    }
+
+    draw();
+    requestAnimationFrame(step);
+  };
+
+  const addWrongPool = (q) => {
+    if(!q) return;
+    const key = q.en + "::" + q.ja;
+    if(!STATE.wrongPool.some(x => (x.en+"::"+x.ja)===key)){
+      STATE.wrongPool.push(q);
+    }
+  };
+
+  // ----------------------------
+  // Input handlers
+  // ----------------------------
+  const answer = (pickedJa) => {
+    if(!STATE.running || STATE.paused) return;
+    if(!STATE.current) return;
+
+    STATE.shots++;
+
+    const correctJa = STATE.current.ja;
+    const ok = pickedJa === correctJa;
+
+    choiceEls.forEach(el=>{
+      const i = Number(el.dataset.i);
+      const ja = STATE.choices[i];
+      el.classList.remove("correct","wrong");
+      if(ja === correctJa) el.classList.add("correct");
+      if(ja === pickedJa && !ok) el.classList.add("wrong");
+    });
+
+    if(ok){
+      STATE.hits++;
+      STATE.combo++;
+      STATE.score += 100 + (STATE.combo*20);
+      showOverlay("HIT!", 180);
+    }else{
+      addWrongPool(STATE.current);
+      damage();
+    }
+    updateHud();
+
+    setTimeout(()=>{
+      choiceEls.forEach(el=>el.classList.remove("correct","wrong"));
+      nextQuestion();
+    }, 240);
+  };
+
+  const submitTyping = () => {
+    if(!STATE.running || STATE.paused) return;
+    if(!STATE.current) return;
+
+    const ans = (STATE.current.en || "").trim().toLowerCase();
+    const typed = (typeInput.value || "").trim().toLowerCase();
+
+    updateTypingProgress(typed);
+
+    STATE.shots++;
+
+    if(typed === ans){
+      STATE.hits++;
+      STATE.combo++;
+      STATE.score += 120 + (STATE.combo*25);
+      showOverlay("HIT!", 180);
+      updateHud();
+      clearHintTimers();
+      nextQuestion();
+      scheduleHints();
+    }else{
+      STATE.missCount++;
+      if(STATE.missCount >= 3){
+        addWrongPool(STATE.current);
+        damage();
+        nextQuestion();
+        scheduleHints();
+      }else{
+        damage();
+        // keep question; reset fall a bit
+        STATE.fallY = -40;
+      }
+      updateHud();
+    }
+  };
+
+  // choice click
+  choiceEls.forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const i = Number(el.dataset.i);
+      const ja = STATE.choices[i];
+      answer(ja);
+    });
+  });
+
+  // typing
+  typeInput.addEventListener("input", ()=> updateTypingProgress(typeInput.value));
+  btnSubmit.addEventListener("click", submitTyping);
+  typeInput.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter"){
+      e.preventDefault();
+      submitTyping();
+    }
+  });
+  btnGiveUp.addEventListener("click", ()=>{
+    // count as 3 misses -> reveal next
+    STATE.missCount = 3;
+    addWrongPool(STATE.current);
+    damage();
+    nextQuestion();
+    scheduleHints();
+  });
+
+  // Start/Pause/Restart
+  const start = () => {
+    STATE.running = true;
+    STATE.paused = false;
+    STATE.tPrev = performance.now();
+
+    btnStart.disabled = true;
+    btnPause.disabled = false;
+    btnRestart.disabled = false;
+
+    // show correct UI
+    if(STATE.mode==="mc"){
+      answers4.style.display = "";
+      typingBox.style.display = "none";
+      clearHintTimers();
+    }else{
+      answers4.style.display = "none";
+      typingBox.style.display = "";
+      scheduleHints();
+    }
+
+    nextQuestion();
+    updateHud();
+    requestAnimationFrame(step);
+  };
+
+  const togglePause = () => {
+    if(!STATE.running) return;
+    STATE.paused = !STATE.paused;
+    btnPause.textContent = STATE.paused ? "再開" : "一時停止";
+    showOverlay(STATE.paused ? "PAUSE" : "GO!", 220);
+    if(!STATE.paused && STATE.mode==="type"){
+      typeInput.focus();
+    }
+  };
+
+  const restart = () => {
+    STATE.running = false;
+    STATE.paused = false;
+    btnPause.textContent = "一時停止";
+    btnStart.disabled = false;
+    btnPause.disabled = true;
+    btnRestart.disabled = true;
+    clearHintTimers();
+    healReset();
+    hudTarget.textContent = "-";
+    overlay.classList.remove("show");
+    draw();
+  };
+
+  const gameOver = () => {
+    STATE.running = false;
+    STATE.paused = false;
+    btnStart.disabled = false;
+    btnPause.disabled = true;
+    btnRestart.disabled = true;
+    clearHintTimers();
+    showOverlay("GAME OVER", 800);
+    pushRank();
+  };
+
+  btnStart.addEventListener("click", start);
+  btnPause.addEventListener("click", togglePause);
+  btnRestart.addEventListener("click", restart);
+
+  btnSpeak.addEventListener("click", ()=>{
+    if(!STATE.current) return;
+    const t = (STATE.mode==="mc") ? STATE.current.en : STATE.current.en;
+    speak(t);
+  });
+
+  btnSkip.addEventListener("click", ()=>{
+    if(!STATE.running || STATE.paused) return;
+    addWrongPool(STATE.current);
+    damage();
+    nextQuestion();
+    if(STATE.mode==="type") scheduleHints();
+  });
+
+  // Help/settings overlays
+  btnHelp.addEventListener("click", ()=> ovHelp.classList.add("show"));
+  closeHelp.addEventListener("click", ()=> ovHelp.classList.remove("show"));
+  ovHelp.addEventListener("click", (e)=>{ if(e.target===ovHelp) ovHelp.classList.remove("show"); });
+
+  btnSettings.addEventListener("click", ()=> ovSettings.classList.add("show"));
+  closeSettings.addEventListener("click", ()=> ovSettings.classList.remove("show"));
+  ovSettings.addEventListener("click", (e)=>{ if(e.target===ovSettings) ovSettings.classList.remove("show"); });
+
+  // Settings logic
+  selMode.addEventListener("change", ()=>{
+    STATE.mode = selMode.value;
+    updateHud();
+    restart();
+  });
+
+  rngSpeed.addEventListener("input", ()=>{
+    STATE.speed = Number(rngSpeed.value) || 1.0;
+    updateHud();
+  });
+
+  rngHard.addEventListener("input", ()=>{
+    STATE.hard = Number(rngHard.value) || 1;
+    updateHud();
+  });
+
+  btnUseBuiltIn.addEventListener("click", ()=>{
+    dataset = builtIn.slice();
+    datasetLabel = "内蔵サンプル";
+    updateHud();
+    restart();
+    ovSettings.classList.remove("show");
+  });
+
+  fileCsv.addEventListener("change", async ()=>{
+    const f = fileCsv.files?.[0];
+    if(!f) return;
+    const txt = await f.text();
+    const arr = parseCSV(txt);
+    if(arr.length){
+      dataset = arr;
+      datasetLabel = f.name;
+      updateHud();
+      restart();
+      ovSettings.classList.remove("show");
+    }else{
+      alert("CSVの読み込みに失敗しました（en,ja,lv 形式を確認）");
+    }
+  });
+
+  btnClearRank.addEventListener("click", ()=>{
+    if(confirm("ランキングを消去しますか？")){
+      try{ localStorage.removeItem(RANK_KEY); }catch(e){}
+      renderRank();
+    }
+  });
+
+  // init
+  STATE.mode = selMode.value;
+  updateHud();
+  renderRank();
+  draw();
+})();
+</script>
+</body>
+</html>
+もしこの置き換え後も404なら、それは **Pages設定（root/docsやbranch）**がズレてます。
+その場合は Settings → Pages のスクショを貼ってくれれば、そこだけピンポイントで直す指示を出します。
+
+
+
+
+選択されていません選択されていません
+ChatGPT の回答は必ずしも正しいとは限りません。重要な情報は確認するようにしてください。cookie の設定を参照してください。
