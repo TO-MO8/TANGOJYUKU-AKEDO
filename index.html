@@ -1857,7 +1857,20 @@ function getPromptText(it){
 
     const lane = Math.floor(Math.random()*LANES);
     const rect = stage.getBoundingClientRect();
-    const x = laneX(lane);
+
+    // --- Clamp X so the card never gets cut off on narrow screens ---
+    // Because .enemy uses transform: translate(-50%, -50%), x is the CENTER.
+    const cardW = div.getBoundingClientRect().width || 160;
+    const half = cardW / 2;
+    const pad = 8; // inner padding from the stage edge
+
+    let minX = half + pad;
+    let maxX = rect.width - half - pad;
+    if(minX > maxX){
+      minX = maxX = rect.width / 2;
+    }
+
+    const x = clamp(laneX(lane), minX, maxX);
     const y = -10;
 
     const speed = isBoss ? Math.max(60, effectiveBaseSpeed * 0.85) : effectiveBaseSpeed + Math.min(160, combo*4);
