@@ -190,42 +190,9 @@
   .kbd{font-size:11px; color:var(--muted); border:1px solid var(--line); padding:2px 6px; border-radius:8px}
 
   /* Answer area */
-  
-/* --- Answer top bar: keep in ONE row on mobile --- */
-.row.answerTop{
-  flex-wrap: nowrap;            /* override .row's wrap */
-  justify-content: space-between;
-  gap: 8px;
-  overflow-x: auto;             /* if width is tight, scroll horizontally instead of wrapping */
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-.row.answerTop::-webkit-scrollbar{display:none;}
-.row.answerLeft, .row.answerRight{ flex-wrap: nowrap; }
-.row.answerLeft{ min-width: max-content; }
-.row.answerRight{ flex: 0 0 auto; }
-
-@media (max-width:520px){
-  .row.answerTop{ gap: 6px; }
-  .row.answerRight .btn.small{ padding: 6px 8px; font-size: 11px; border-radius: 12px; }
-  .row.answerLeft .pill{ padding: 6px 8px; }
-}
-
-.answers{
+  .answers{
     display:grid; gap:10px;
     grid-template-columns: 1fr 1fr;
-  }
-
-  /* Answer header (モード/ターゲット + 発音/スキップ)
-     Mobile fix: prevent overlap by allowing clean wrapping + truncation. */
-  .answerTop{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap}
-  .answerLeft,.answerRight{display:flex; gap:8px; align-items:center; flex-wrap:wrap; min-width:0}
-  .answerLeft .pill{min-width:0}
-  #hudTarget{display:inline-block; max-width: 46vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  @media (max-width:520px){
-    .answerTop{justify-content:flex-start}
-    .answerRight{width:100%; justify-content:flex-end}
-    #hudTarget{max-width: 60vw}
   }
   @media (max-width:520px){
     .answers{grid-template-columns:1fr}
@@ -421,6 +388,28 @@
     /* Hide pause/restart while disabled to keep header short before starting */
     #btnPause:disabled, #btnRestart:disabled{ display:none; }
   }
+
+  /* --- Answer top bar: keep Mode/Target + Speak/Skip tidy on mobile --- */
+  .answerTop{display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap}
+  .answerLeft,.answerRight{display:flex; gap:8px; align-items:center}
+  .answerLeft{min-width:0}
+  .answerLeft .pill span{max-width: 220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  @media (max-width:520px){
+    .answerTop{flex-wrap:nowrap}
+    .answerLeft{gap:6px}
+    .answerLeft .pill{padding:6px 8px; border-radius:14px}
+    .answerLeft .pill strong{font-size:11px}
+    .answerLeft .pill span{font-size:11px; max-width: 140px}
+    .answerRight{gap:6px}
+    #btnSpeak, #btnSkip{
+      min-width:44px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      font-size: 18px; /* big icon */
+      line-height: 1;
+    }
+  }
+
 </style>
 </head>
 <body>
@@ -478,13 +467,13 @@
 
       <div id="answerArea">
         <div class="row answerTop">
-          <div class="row answerLeft" style="gap:8px">
+          <div class="row answerLeft">
             <span class="pill"><strong>モード</strong><span id="hudMode" class="mono">4択</span></span>
             <span class="pill"><strong>ターゲット</strong><span id="hudTarget" class="mono">-</span></span>
           </div>
-          <div class="row answerRight" style="gap:8px">
-            <button id="btnSpeak" class="btn small" disabled>🔊 発音</button>
-            <button id="btnSkip" class="btn small" disabled>スキップ</button>
+          <div class="row answerRight">
+            <button id="btnSpeak" class="btn small" disabled title="発音">🔊</button>
+            <button id="btnSkip" class="btn small" disabled title="スキップ">⏭</button>
           </div>
         </div>
 
