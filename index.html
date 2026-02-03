@@ -190,7 +190,28 @@
   .kbd{font-size:11px; color:var(--muted); border:1px solid var(--line); padding:2px 6px; border-radius:8px}
 
   /* Answer area */
-  .answers{
+  
+/* --- Answer top bar: keep in ONE row on mobile --- */
+.row.answerTop{
+  flex-wrap: nowrap;            /* override .row's wrap */
+  justify-content: space-between;
+  gap: 8px;
+  overflow-x: auto;             /* if width is tight, scroll horizontally instead of wrapping */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.row.answerTop::-webkit-scrollbar{display:none;}
+.row.answerLeft, .row.answerRight{ flex-wrap: nowrap; }
+.row.answerLeft{ min-width: max-content; }
+.row.answerRight{ flex: 0 0 auto; }
+
+@media (max-width:520px){
+  .row.answerTop{ gap: 6px; }
+  .row.answerRight .btn.small{ padding: 6px 8px; font-size: 11px; border-radius: 12px; }
+  .row.answerLeft .pill{ padding: 6px 8px; }
+}
+
+.answers{
     display:grid; gap:10px;
     grid-template-columns: 1fr 1fr;
   }
