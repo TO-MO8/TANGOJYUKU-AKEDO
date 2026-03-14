@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>単語塾アーケード（落下ワード） v42</title>
+<title>単語塾アーケード（落下ワード） v43</title>
 <style>
   :root{
     --bg:#0b1020; --card:#121a33; --ink:#e8eeff; --muted:#a9b3d6;
@@ -481,7 +481,7 @@
 
   .versionBadgeFixed{position:fixed; right:10px; bottom:10px; z-index:9999; padding:8px 12px; border-radius:999px; background:rgba(25,34,70,.92); color:#dfe7ff; border:1px solid rgba(130,170,255,.45); box-shadow:0 10px 24px rgba(0,0,0,.35); font:700 12px/1.2 system-ui,sans-serif; letter-spacing:.04em; pointer-events:none}
   .versionMini{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(25,34,70,.72); color:#dfe7ff; border:1px solid rgba(130,170,255,.35); font-size:12px; font-weight:800}
-  .mobileFocusExit{display:none; position:fixed; right:10px; top:10px; z-index:10010; padding:9px 12px; border-radius:999px; background:rgba(18,26,51,.94); color:#eaf2ff; border:1px solid rgba(130,170,255,.45); box-shadow:0 10px 24px rgba(0,0,0,.35); font:800 12px/1 system-ui,sans-serif}
+  .mobileFocusExit{display:none !important; position:fixed; right:10px; top:10px; z-index:10010; padding:9px 12px; border-radius:999px; background:rgba(18,26,51,.94); color:#eaf2ff; border:1px solid rgba(130,170,255,.45); box-shadow:0 10px 24px rgba(0,0,0,.35); font:800 12px/1 system-ui,sans-serif; pointer-events:none}
   @media (max-width:520px){ .versionBadgeFixed{right:8px; bottom:8px; font-size:11px; padding:7px 10px} .versionMini{font-size:11px; padding:5px 8px} .mobileFocusExit{right:8px; top:8px; font-size:11px; padding:8px 10px} }
 
 
@@ -584,17 +584,122 @@
     }
   }
 
+
+  .mobileInlineExit{display:none}
+  @media (max-width:900px){
+    body.mobile-typing-pad #typingPanel .mobileInlineExit{display:inline-flex}
+    body.mobile-typing-pad.mobile-typing-focus #typingPanel .mobileInlineExit{display:inline-flex; padding:10px 12px; font-size:14px; min-height:40px}
+  }
+
+
+  .choiceMobileActions{display:none; gap:8px; margin:0 0 8px; align-items:center}
+  .mobileOnlyStartChoice,.mobileInlineExitChoice{display:none}
+  @media (max-width:900px){
+    body.mobile-choice-compact #choicePanel .choiceMobileActions{display:flex}
+    body.mobile-choice-compact #choicePanel .mobileOnlyStartChoice,
+    body.mobile-choice-compact #choicePanel .mobileInlineExitChoice{display:inline-flex}
+    body.mobile-choice-compact #choicePanel > .hint{display:none}
+  }
+
+  /* --- Mobile 4-choice focus mode --- */
+  @media (max-width:900px){
+    body.mobile-choice-focus{
+      overflow:hidden;
+      height:100vh;
+      height:100dvh;
+    }
+    body.mobile-choice-focus header,
+    body.mobile-choice-focus aside.card{
+      display:none;
+    }
+    body.mobile-choice-focus main{
+      max-width:none;
+      margin:0;
+      padding:0;
+      display:block;
+      height:100vh;
+      height:100dvh;
+    }
+    body.mobile-choice-focus main > section.card{
+      border-radius:0;
+      border-left:none;
+      border-right:none;
+      border-bottom:none;
+      min-height:100vh;
+      min-height:100dvh;
+      height:100vh;
+      height:100dvh;
+      box-shadow:none;
+      display:flex;
+      flex-direction:column;
+      background: rgba(18,26,51,.94);
+    }
+    body.mobile-choice-focus main > section.card > .hd{
+      padding:8px 10px 6px;
+      flex:0 0 auto;
+    }
+    body.mobile-choice-focus main > section.card > .hd h2{font-size:13px}
+    body.mobile-choice-focus main > section.card > .hd .tiny{font-size:11px}
+    body.mobile-choice-focus main > section.card > .bd{
+      padding:8px 10px calc(8px + var(--sab));
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      flex:1 1 auto;
+    }
+    body.mobile-choice-focus #stageWrap{
+      flex:1 1 auto;
+      min-height:0;
+      height:auto !important;
+    }
+    body.mobile-choice-focus #answerArea{
+      flex:0 0 auto;
+    }
+    body.mobile-choice-focus #choicePanel{
+      margin-top:0;
+    }
+    body.mobile-choice-focus #choicePanel .choiceMobileActions{
+      display:flex;
+      margin:2px 0 10px;
+      gap:8px;
+    }
+    body.mobile-choice-focus #choicePanel .choiceMobileActions .btn{
+      padding:10px 12px;
+      font-size:14px;
+      min-height:40px;
+    }
+    body.mobile-choice-focus #choicePanel .answers{
+      margin-top:8px;
+      gap:8px;
+    }
+    body.mobile-choice-focus #choicePanel .choice{
+      min-height:58px;
+      padding:14px 12px;
+    }
+    body.mobile-choice-focus #choicePanel > .hint{
+      display:none;
+    }
+    body.mobile-choice-focus .versionBadgeFixed{
+      right:8px;
+      bottom:calc(8px + var(--sab));
+      font-size:10px;
+      padding:6px 8px;
+      opacity:.82;
+    }
+  }
+
 </style>
 </head>
 <body>
-<div class="versionBadgeFixed">いま開いている版: v42</div>
+<div class="versionBadgeFixed">いま開いている版: v44</div>
 <button id="btnMobileFocusExit" class="mobileFocusExit" type="button">通常画面へ</button>
 <header>
   <div class="row" style="justify-content:space-between">
     <div class="title">
       <h1>単語塾アーケード（落下ワード）</h1>
       <span class="tag">CSV対応 / コンボ / ボス復習</span>
-      <span class="versionMini">いまの版: v42</span>
+      <span class="versionMini">いまの版: v44</span>
     </div>
     <div class="row">
       <button id="btnHelp" class="btn small ghost">使い方</button>
@@ -655,6 +760,10 @@
         </div>
 
         <div id="choicePanel">
+          <div class="choiceMobileActions">
+            <button id="btnStartChoiceMobile" class="btn primary mobileOnlyStartChoice">スタート</button>
+            <button id="btnMobileChoiceFocusExitInline" class="btn mobileInlineExitChoice" type="button">←戻る</button>
+          </div>
           <div class="answers">
             <button class="choice" data-i="0"><b id="c0">-</b><small class="mono">1</small></button>
             <button class="choice" data-i="1"><b id="c1">-</b><small class="mono">2</small></button>
@@ -673,6 +782,7 @@
             <button id="btnEnter" class="btn primary">Enter</button>
             <button id="btnReveal" class="btn">答えを見る</button>
             <button id="btnStartTypingMobile" class="btn primary mobileOnlyStart">スタート</button>
+            <button id="btnMobileFocusExitInline" class="btn mobileInlineExit" type="button">←戻る</button>
           </div>
           <div id="typeMirror" class="typeMirror mono" aria-live="polite"></div>
           <div id="typeAnswerLive" class="typeAnswerLive" aria-live="assertive"></div>
@@ -1285,6 +1395,9 @@ window.addEventListener('DOMContentLoaded', () => {
   const mobileTypingPad = $("#mobileTypingPad");
     const mobilePadLetterGrid = $("#mobilePadLetterGrid");
     const btnStartTypingMobile = $("#btnStartTypingMobile");
+    const btnMobileFocusExitInline = $("#btnMobileFocusExitInline");
+    const btnStartChoiceMobile = $("#btnStartChoiceMobile");
+    const btnMobileChoiceFocusExitInline = $("#btnMobileChoiceFocusExitInline");
   const btnMobileFocusExit = $("#btnMobileFocusExit");
 
   const cEls = [$("#c0"), $("#c1"), $("#c2"), $("#c3")];
@@ -2091,6 +2204,7 @@ function getPromptText(it){
   const MOBILE_PAD_TARGET_COUNT = 10;
   let mobilePadLetters = [];
   let mobileTypingFocusDismissed = false;
+  let mobileChoiceFocusDismissed = false;
 
   function isMobileTypingPadEnv(){
     try{
@@ -2106,11 +2220,19 @@ function getPromptText(it){
     return mode === "typing" && isMobileTypingPadEnv();
   }
 
+  function usingMobileChoiceCompact(){
+    return mode === "choice" && isMobileTypingPadEnv();
+  }
+
   function syncMobileTypingPad(){
     const usePad = usingMobileTypingPad();
+    const useChoiceCompact = usingMobileChoiceCompact();
     const focusOn = usePad && running && !mobileTypingFocusDismissed;
+    const choiceFocusOn = useChoiceCompact && running && !mobileChoiceFocusDismissed;
     document.body.classList.toggle("mobile-typing-pad", usePad);
     document.body.classList.toggle("mobile-typing-focus", focusOn);
+    document.body.classList.toggle("mobile-choice-compact", useChoiceCompact);
+    document.body.classList.toggle("mobile-choice-focus", choiceFocusOn);
     if(typeInput){
       typeInput.readOnly = usePad;
       if(usePad) typeInput.setAttribute("readonly", "readonly");
@@ -3131,6 +3253,8 @@ function getPromptText(it){
   function start(){
     if(running) return;
     mobileTypingFocusDismissed = false;
+    mobileChoiceFocusDismissed = false;
+    mobileChoiceFocusDismissed = false;
     running = true;
     paused = false;
 
@@ -3150,6 +3274,8 @@ function getPromptText(it){
 
     // mode
     mode = optMode.value;
+    mobileTypingFocusDismissed = false;
+    mobileChoiceFocusDismissed = false;
     hudMode.textContent = (mode === "typing") ? "タイピング" : "4択";
     // Apply 4-choice direction (no effect in typing)
     if(optChoiceDir){
@@ -3264,7 +3390,20 @@ function getPromptText(it){
 
   btnStart.addEventListener("click", start);
   if(btnStartTypingMobile) btnStartTypingMobile.addEventListener("click", start);
-  if(btnMobileFocusExit) btnMobileFocusExit.addEventListener("click", () => { mobileTypingFocusDismissed = true; syncMobileTypingPad(); toast("通常画面に戻りました"); });
+  if(btnStartChoiceMobile) btnStartChoiceMobile.addEventListener("click", start);
+  function exitMobileTypingFocus(){
+    mobileTypingFocusDismissed = true;
+    syncMobileTypingPad();
+    toast("通常画面に戻りました");
+  }
+  if(btnMobileFocusExit) btnMobileFocusExit.addEventListener("click", exitMobileTypingFocus);
+  if(btnMobileFocusExitInline) btnMobileFocusExitInline.addEventListener("click", exitMobileTypingFocus);
+  function exitMobileChoiceFocus(){
+    mobileChoiceFocusDismissed = true;
+    syncMobileTypingPad();
+    toast("通常画面に戻りました");
+  }
+  if(btnMobileChoiceFocusExitInline) btnMobileChoiceFocusExitInline.addEventListener("click", exitMobileChoiceFocus);
   btnPause.addEventListener("click", togglePause);
   btnRestart.addEventListener("click", restart);
 
