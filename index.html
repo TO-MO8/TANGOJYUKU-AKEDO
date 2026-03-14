@@ -304,6 +304,8 @@
       padding: 14px 12px;
     }
     body.mobile-typing-pad #typingPanel .typingRow .btn{padding:12px 14px}
+    /* Fallback: always show compact pad on narrow screens in typing mode */
+    #typingPanel .mobileTypingPad{display:block}
   }
 
   input[type="text"].ok{border-color: rgba(56,217,150,.55); box-shadow: 0 0 0 3px rgba(56,217,150,.14)}
@@ -1969,12 +1971,11 @@ function getPromptText(it){
 
   function isMobileTypingPadEnv(){
     try{
-      const narrow = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
-      const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-      const ua = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
-      return !!(narrow && (coarse || ua));
+      const ww = Math.min(window.innerWidth || 9999, (window.visualViewport && window.visualViewport.width) || 9999);
+      const narrow = ww <= 900 || (window.matchMedia && window.matchMedia("(max-width: 900px)").matches);
+      return !!narrow;
     }catch{
-      return false;
+      return (window.innerWidth || 9999) <= 900;
     }
   }
 
@@ -1987,6 +1988,8 @@ function getPromptText(it){
     document.body.classList.toggle("mobile-typing-pad", usePad);
     if(typeInput){
       typeInput.readOnly = usePad;
+      if(usePad) typeInput.setAttribute("readonly", "readonly");
+      else typeInput.removeAttribute("readonly");
       typeInput.setAttribute("inputmode", usePad ? "none" : "text");
       typeInput.setAttribute("autocapitalize", "off");
       typeInput.setAttribute("autocorrect", "off");
@@ -2787,6 +2790,21 @@ function getPromptText(it){
     if(usingMobileTypingPad()){
       e.preventDefault();
       typeInput.blur();
+      syncMobileTypingPad();
+    }
+  });
+  typeInput.addEventListener("touchstart", (e) => {
+    if(usingMobileTypingPad()){
+      e.preventDefault();
+      typeInput.blur();
+      syncMobileTypingPad();
+    }
+  }, {passive:false});
+  typeInput.addEventListener("focus", (e) => {
+    if(usingMobileTypingPad()){
+      e.preventDefault();
+      typeInput.blur();
+      syncMobileTypingPad();
     }
   });
   typeInput.addEventListener("keydown", (e) => {
