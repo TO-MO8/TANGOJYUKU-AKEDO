@@ -1,0 +1,3454 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>単語塾アーケード（落下ワード）</title>
+<style>
+  :root{
+    --bg:#0b1020; --card:#121a33; --ink:#e8eeff; --muted:#a9b3d6;
+    --good:#38d996; --bad:#ff5c7a; --warn:#ffcc66; --line:rgba(255,255,255,.12);
+    --shadow: 0 10px 24px rgba(0,0,0,.35);
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
+    background: radial-gradient(1200px 800px at 20% 10%, #1a2a66 0%, rgba(26,42,102,0) 55%),
+                radial-gradient(1000px 700px at 80% 0%, #4a1f6c 0%, rgba(74,31,108,0) 55%),
+                var(--bg);
+    color:var(--ink);
+  }
+  /* --- Mobile safe-area / dynamic viewport fixes (top cut-off prevention) --- */
+  :root{
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+  }
+  /* Keep content away from notch/status bar while allowing header background to extend */
+  header{
+    padding-top: calc(14px + var(--sat));
+  }
+  /* Overlays should also respect safe area */
+  .overlay{
+    padding-top: calc(16px + var(--sat));
+    padding-bottom: calc(16px + var(--sab));
+  }
+  /* Use dynamic viewport units on mobile to avoid URL bar cropping */
+  #stageWrap{height: min(62vh, 520px); height: min(62dvh, 520px);}
+  @media (max-width:520px){
+    #stageWrap{height: min(62vh, 460px); height: min(62dvh, 460px);}
+  }
+
+  header{
+    padding: 14px 14px 10px;
+    position: relative;
+    backdrop-filter: blur(10px);
+    background: linear-gradient(to bottom, rgba(11,16,32,.92), rgba(11,16,32,.65));
+    border-bottom:1px solid var(--line);
+  }
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .title{
+    display:flex; align-items:baseline; gap:10px;
+  }
+  .title h1{font-size:16px; margin:0}
+  .title .tag{font-size:12px; padding:3px 9px; border:1px solid var(--line); border-radius:999px; color:var(--muted)}
+  .pill{
+    padding:8px 12px; border:1px solid var(--line); border-radius:999px;
+    background: rgba(255,255,255,.04);
+    display:inline-flex; align-items:center; gap:8px;
+    box-shadow: 0 6px 16px rgba(0,0,0,.12);
+  }
+  .pill strong{font-size:12px}
+  .pill span{font-size:12px; color:var(--muted)}
+  .btn{
+    border:1px solid var(--line); background: rgba(255,255,255,.06);
+    color:var(--ink); padding:10px 12px; border-radius:14px; cursor:pointer;
+    box-shadow: var(--shadow);
+    transition: transform .06s ease, background .12s ease;
+  }
+  .btn:active{transform: translateY(1px)}
+  .btn.primary{background: rgba(56,217,150,.18); border-color: rgba(56,217,150,.35)}
+  .btn.danger{background: rgba(255,92,122,.14); border-color: rgba(255,92,122,.35)}
+  .btn.ghost{box-shadow:none}
+  .btn.small{padding:8px 10px; border-radius:12px; font-size:12px}
+  .btn:disabled{opacity:.5; cursor:not-allowed; transform:none}
+  main{
+    max-width: 980px; margin: 0 auto;
+    padding: 14px;
+    display:grid; gap:12px;
+    grid-template-columns: 1.3fr .7fr;
+  }
+  @media (max-width: 900px){
+    main{grid-template-columns:1fr}
+  }
+  .card{
+    background: rgba(18,26,51,.78);
+    border:1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+  .card .hd{
+    padding: 12px 12px 10px;
+    border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+  }
+  .card .hd h2{margin:0; font-size:14px}
+  .card .bd{
+    padding:12px;
+    overflow:auto;
+    flex: 1 1 auto;
+  }
+  .muted{color:var(--muted)}
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
+
+  /* Game stage */
+  #stageWrap{position:relative; width:100%; height: min(62vh, 520px);}
+  #stage{
+    position:relative; width:100%; height:100%;
+    border-radius: 16px;
+    background: linear-gradient(to bottom, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border:1px solid var(--line);
+    overflow:hidden;
+  }
+  #stage::after{
+    content:"";
+    position:absolute; left:0; right:0; bottom:0; height:64px;
+    background: linear-gradient(to top, rgba(0,0,0,.35), rgba(0,0,0,0));
+    pointer-events:none;
+  }
+  .laneHint{
+    position:absolute; inset:0;
+    background:
+      linear-gradient(to right, rgba(255,255,255,.06) 1px, rgba(0,0,0,0) 1px) 0 0 / 25% 100%;
+    opacity:.22;
+    pointer-events:none;
+  }
+  .enemy{
+    position:absolute;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.08);
+    box-shadow: 0 12px 24px rgba(0,0,0,.25);
+    min-width: 160px;
+    max-width: min(260px, 60vw);
+    transform: translate(-50%, -50%);
+    user-select:none;
+  }
+  .enemy .top{display:flex; align-items:center; justify-content:space-between; gap:10px}
+  .enemy .w{font-weight:700; font-size:16px; letter-spacing:.2px}
+  .enemy .lv{font-size:11px; color:var(--muted); padding:2px 8px; border:1px solid var(--line); border-radius:999px}
+  .enemy .sub{margin-top:6px; font-size:12px; color:var(--muted); line-height:1.25}
+  .enemy.good{border-color: rgba(56,217,150,.5); background: rgba(56,217,150,.14)}
+  .enemy.bad{border-color: rgba(255,92,122,.5); background: rgba(255,92,122,.14)}
+
+  .enemy.target{
+    border-color: rgba(56,217,150,.95);
+    background: rgba(56,217,150,.10);
+    box-shadow: 0 0 0 2px rgba(56,217,150,.30), 0 18px 34px rgba(0,0,0,.38);
+  }
+  .enemy.target::after{
+    content: "TARGET";
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(56,217,150,.90);
+    color: #062b18;
+    border: 1px solid rgba(0,0,0,.12);
+    letter-spacing: .06em;
+  }
+  .enemy.boss{
+    border-color: rgba(255,204,102,.55);
+    background: rgba(255,204,102,.12);
+  }
+  .shake{animation: shake .18s linear 0s 2}
+  @keyframes shake{
+    0%{transform: translate(-50%,-50%) translateX(0)}
+    25%{transform: translate(-50%,-50%) translateX(-3px)}
+    50%{transform: translate(-50%,-50%) translateX(3px)}
+    75%{transform: translate(-50%,-50%) translateX(-2px)}
+    100%{transform: translate(-50%,-50%) translateX(0)}
+  }
+
+  /* HUD */
+  .hud{display:flex; flex-wrap:wrap; gap:8px}
+  .meter{display:flex; align-items:center; gap:10px}
+  .bar{
+    width: 160px; height: 10px; border-radius: 999px;
+    background: rgba(255,255,255,.08);
+    border:1px solid var(--line);
+    overflow:hidden;
+  }
+  .bar > i{display:block; height:100%; width:100%; background: rgba(56,217,150,.6)}
+  .bar.hp > i{background: rgba(255,92,122,.6)}
+  .bar.boss > i{background: rgba(255,204,102,.7)}
+  .kbd{font-size:11px; color:var(--muted); border:1px solid var(--line); padding:2px 6px; border-radius:8px}
+
+  /* Answer area */
+  .answers{
+    display:grid; gap:10px;
+    grid-template-columns: 1fr 1fr;
+  }
+  @media (max-width:520px){
+    .answers{grid-template-columns:1fr}
+    #stageWrap{height: min(62vh, 460px);}
+  }
+  .choice{
+    width:100%;
+    padding: 14px 12px;
+    border-radius: 16px;
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.06);
+    color:var(--ink);
+    text-align:left;
+    cursor:pointer;
+    box-shadow: 0 10px 24px rgba(0,0,0,.22);
+    transition: transform .06s ease, background .12s ease;
+    display:flex; justify-content:space-between; gap:10px; align-items:center;
+    min-height: 54px;
+  }
+  .choice:active{transform: translateY(1px)}
+  .choice b{font-size:14px}
+  .choice small{color:var(--muted); font-size:11px}
+  .choice.correct{border-color: rgba(56,217,150,.55); background: rgba(56,217,150,.14)}
+  .choice.wrong{border-color: rgba(255,92,122,.55); background: rgba(255,92,122,.14)}
+
+  .typingRow{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  input[type="text"]{
+    /* タイピングが見えやすいように大きめ */
+    width: min(560px, 100%);
+    padding: 16px 14px;
+    border-radius: 14px;
+    border:1px solid var(--line);
+    background: rgba(0,0,0,.25);
+    color:var(--ink);
+    outline:none;
+    font-size: 24px;
+    line-height: 1.15;
+    letter-spacing: .02em;
+    font-weight: 700;
+    caret-color: var(--good);
+  }
+  input[type="text"]::placeholder{color: rgba(169,179,214,.8)}
+
+  @media (max-width:520px){
+    input[type="text"]{ font-size: 22px; padding: 16px 14px; }
+  }
+
+  /* Typing progress (per-letter feedback) */
+  .typeMirror{margin-top:10px; display:flex; gap:6px; align-items:center; flex-wrap:wrap}
+  .typeMirror .label{font-size:12px; color:var(--muted); margin-right:2px}
+  .typeMirror .tile{
+    min-width: 30px;
+    padding: 10px 10px;
+    border-radius: 12px;
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.04);
+    text-align:center;
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: .02em;
+    user-select:none;
+  }
+  .typeMirror .tile.pending{opacity:.55}
+  .typeMirror .tile.correct{border-color: rgba(56,217,150,.55); background: rgba(56,217,150,.16)}
+  .typeMirror .tile.wrong{border-color: rgba(255,92,122,.55); background: rgba(255,92,122,.14)}
+  .typeAnswerLive{display:none; margin-top:10px; padding:12px 14px; border-radius:14px; border:1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.06); font-weight:900; font-size:18px; line-height:1.5}
+  .typeAnswerLive.show{display:block}
+  .typeAnswerLive.wrong{border-color: rgba(255,92,122,.6); background: rgba(255,92,122,.16); color:#ffd7df}
+  .typeAnswerLive.reveal{border-color: rgba(107,208,255,.6); background: rgba(107,208,255,.14); color:#d9f4ff}
+
+  /* Smartphone-only compact typing pad */
+  .mobileTypingPad{display:none; margin-top:10px}
+  .mobileTypingPad.show{display:block}
+  .mobileTypingPad .padHint{font-size:12px; color:var(--muted); margin:0 0 8px}
+  .mobileTypingPadGrid{
+    display:grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap:8px;
+  }
+  .mobileTypingPadActions{
+    margin-top:8px;
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap:8px;
+  }
+  .mobileKeyBtn{
+    min-height: 42px;
+    border-radius: 12px;
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.06);
+    color: var(--ink);
+    font-weight: 900;
+    font-size: 18px;
+    line-height: 1;
+    box-shadow: 0 8px 18px rgba(0,0,0,.16);
+    transition: transform .06s ease, background .12s ease, border-color .12s ease;
+    user-select:none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobileKeyBtn:active{transform: translateY(1px)}
+  .mobileKeyBtn.action{font-size: 15px; min-height: 44px}
+
+  @media (max-width: 900px){
+    body.mobile-typing-pad #typingPanel .typingRow{gap:8px}
+    body.mobile-typing-pad #typingPanel input[type="text"]{
+      width: 100%;
+      font-size: 20px;
+      padding: 14px 12px;
+    }
+    body.mobile-typing-pad #typingPanel .typingRow .btn{padding:12px 14px}
+  }
+
+  input[type="text"].ok{border-color: rgba(56,217,150,.55); box-shadow: 0 0 0 3px rgba(56,217,150,.14)}
+  input[type="text"].ng{border-color: rgba(255,92,122,.55); box-shadow: 0 0 0 3px rgba(255,92,122,.12)}
+
+  .hint{
+    font-size:12px; color:var(--muted); line-height:1.35;
+  }
+
+  /* Overlay */
+  .overlay{
+    position:fixed; inset:0; display:none;
+    background: rgba(0,0,0,.55);
+    backdrop-filter: blur(8px);
+    z-index:50;
+    padding: 16px;
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .overlay .panel{
+    max-width: 920px; margin: 0 auto;
+    background: rgba(18,26,51,.95);
+    border:1px solid var(--line);
+    border-radius: 22px;
+    box-shadow: 0 18px 44px rgba(0,0,0,.45);
+    overflow:hidden;
+
+    /* allow tall content like results tables to be scrollable */
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    display:flex;
+    flex-direction:column;
+  }
+  .overlay .panel .hd{padding: 14px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:10px}
+  .overlay .panel .bd{padding:14px; overflow:auto; flex:1 1 auto; -webkit-overflow-scrolling:touch}
+  
+  .grid2{display:grid; gap:12px; grid-template-columns: 1fr 1fr}
+  @media (max-width:760px){.grid2{grid-template-columns:1fr}}
+  textarea{
+    width:100%;
+    min-height: 140px;
+    padding: 10px;
+    border-radius: 14px;
+    border:1px solid var(--line);
+    background: rgba(0,0,0,.25);
+    color:var(--ink);
+    outline:none;
+    resize: vertical;
+  }
+  .tiny{font-size:11px; color:var(--muted)}
+  table{width:100%; border-collapse:collapse; font-size:13px}
+  .thbtn{
+    appearance:none; -webkit-appearance:none;
+    border:0; background:transparent; color:inherit;
+    font:inherit; font-weight:600;
+    padding:6px 8px; margin:-6px -8px;
+    border-radius:10px;
+    cursor:pointer;
+  }
+  .thbtn:hover{background:rgba(255,255,255,.08)}
+  .thbtn:active{transform:translateY(1px)}
+  .thbtn .arrow{opacity:.8; margin-left:4px; font-size:11px}
+
+  th,td{padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top}
+  th{text-align:left; color:var(--muted); font-weight:600}
+  .right{text-align:right}
+  .good{color:var(--good)}
+  .bad{color:var(--bad)}
+
+
+  /* --- Mobile layout fixes: prevent "can't play because header eats screen" --- */
+  html, body{ max-width: 100%; overflow-x:hidden; }
+  @media (max-width: 520px){
+    header{ padding: 10px 12px; }
+    header .title h1{ font-size: 18px; line-height:1.15; }
+    header .title .tag{ font-size: 12px; padding: 6px 10px; }
+    .hud{ gap:8px; flex-wrap:wrap; }
+    .pill{ padding:10px 12px; }
+    #btnStart{ padding: 12px 14px; }
+    main{ padding: 10px; }
+    .card .hd{ padding: 10px 12px; }
+    .card .bd{ padding: 10px 12px; }
+  }
+
+  /* Let the stage grow to fill the remaining visible viewport (JS will fine-tune) */
+  #stageWrap{ height: min(60dvh, 560px); }
+
+
+  /* --- Mobile: give more room to the stage by compacting controls/answers --- */
+  #answerArea{ margin-top: 8px; }
+  @media (max-width: 520px){
+    /* Put 4 choices in 2 columns to save vertical space */
+    .answers{ grid-template-columns: 1fr 1fr !important; gap: 8px; }
+    .choice{ padding: 10px 10px; min-height: 46px; border-radius: 14px; }
+    .choice b{ font-size: 13px; }
+    .choice small{ font-size: 10px; }
+    /* Compact the pills and small buttons row */
+    .pill{ padding: 8px 10px; }
+    .btn.small{ padding: 8px 10px; }
+  }
+  @media (max-width: 340px){
+    .answers{ grid-template-columns: 1fr !important; }
+  }
+
+
+  /* --- Mobile: shrink the top header panel to free the stage area --- */
+  @media (max-width: 520px){
+    header{ padding-top: calc(8px + var(--sat)); padding-left:10px; padding-right:10px; padding-bottom:8px; }
+    header .row{ gap:8px; }
+    header .title h1{ font-size: 16px; line-height:1.12; }
+    header .title .tag{ display:none; } /* tag line takes vertical space */
+    #btnHelp, #btnSettings{ padding: 6px 10px; font-size: 12px; border-radius: 12px; }
+    /* Less vertical gaps between header blocks */
+    header .row[style*="margin-top"]{ margin-top: 6px !important; }
+
+    /* Pills become compact */
+    .pill{ padding: 6px 8px; border-radius: 14px; }
+    .pill strong{ font-size: 11px; }
+    .pill span{ font-size: 11px; }
+    .pill.meter .bar{ height: 8px; }
+    .pill.meter{ gap:6px; }
+
+    /* Hide CSV pill on small screens (still accessible via settings) */
+    #pillCsv{ display:none; }
+
+    /* Reduce button sizes */
+    #btnStart, #btnPause, #btnRestart{ padding: 8px 10px; font-size: 12px; border-radius: 14px; }
+
+    /* Hide pause/restart while disabled to keep header short before starting */
+    #btnPause:disabled, #btnRestart:disabled{ display:none; }
+  }
+
+  /* --- Answer top bar: keep Mode/Target + Speak/Skip tidy on mobile --- */
+  .answerTop{display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap}
+  .answerLeft,.answerRight{display:flex; gap:8px; align-items:center}
+  .answerLeft{min-width:0}
+  .answerLeft .pill span{max-width: 220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  @media (max-width:520px){
+    .answerTop{flex-wrap:nowrap}
+    .answerLeft{gap:6px}
+    .answerLeft .pill{padding:6px 8px; border-radius:14px}
+    .answerLeft .pill strong{font-size:11px}
+    .answerLeft .pill span{font-size:11px; max-width: 140px}
+    .answerRight{gap:6px}
+    #btnSpeak, #btnSkip{
+      min-width:44px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      font-size: 18px; /* big icon */
+      line-height: 1;
+    }
+  }
+
+
+  /* --- Feedback FX: drop-miss popup --- */
+  @keyframes fadeUp{
+    from{opacity:1; transform:translate(-50%,0)}
+    to{opacity:0; transform:translate(-50%,-20px)}
+  }
+  @keyframes fadeUpAnswer{
+    from{opacity:1; transform:translate(-50%,0)}
+    to{opacity:0; transform:translate(-50%,-28px)}
+  }
+
+</style>
+</head>
+<body>
+<header>
+  <div class="row" style="justify-content:space-between">
+    <div class="title">
+      <h1>単語塾アーケード（落下ワード）</h1>
+      <span class="tag">CSV対応 / コンボ / ボス復習</span>
+    </div>
+    <div class="row">
+      <button id="btnHelp" class="btn small ghost">使い方</button>
+      <button id="btnSettings" class="btn small">設定</button>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:10px; justify-content:space-between">
+    <div class="hud">
+      <div class="pill"><strong>スコア</strong><span id="hudScore" class="mono">0</span></div>
+      <div class="pill"><strong>コンボ</strong><span id="hudCombo" class="mono">0</span></div>
+      <div class="pill"><strong>命中</strong><span id="hudAcc" class="mono">0%</span></div>
+      <div class="pill" id="pillCsv"><strong>CSV</strong><span id="hudCsv" class="mono">内蔵サンプル</span></div>
+    </div>
+    <div class="hud">
+      <div class="pill meter">
+        <strong>HP</strong>
+        <div class="bar hp"><i id="hpBar"></i></div>
+        <span id="hpTxt" class="mono">5/5</span>
+      </div>
+      <div class="pill meter" id="bossHud" style="display:none">
+        <strong>ボス</strong>
+        <div class="bar boss"><i id="bossBar"></i></div>
+        <span id="bossTxt" class="mono">0/0</span>
+      </div>
+      <button id="btnStart" class="btn primary">スタート</button>
+      <button id="btnPause" class="btn" disabled>一時停止</button>
+      <button id="btnRestart" class="btn danger" disabled>リスタート</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <div class="hd">
+      <h2>ステージ</h2>
+      <div class="row">
+        <span class="tiny">操作: <span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="kbd">4</span> / <span class="kbd">Space</span> 一時停止 / <span class="kbd">R</span> リスタート</span>
+      </div>
+    </div>
+    <div class="bd">
+      <div id="stageWrap">
+        <div id="stage">
+          <div class="laneHint"></div>
+        </div>
+      </div>
+
+      <div id="answerArea">
+        <div class="row answerTop">
+          <div class="row answerLeft">
+            <span class="pill"><strong>モード</strong><span id="hudMode" class="mono">4択</span></span>
+            <span class="pill"><strong>ターゲット</strong><span id="hudTarget" class="mono">-</span></span>
+          </div>
+          <div class="row answerRight">
+            <button id="btnSpeak" class="btn small" disabled title="発音">🔊</button>
+            <button id="btnSkip" class="btn small" disabled title="スキップ">⏭</button>
+          </div>
+        </div>
+
+        <div id="choicePanel">
+          <div class="answers">
+            <button class="choice" data-i="0"><b id="c0">-</b><small class="mono">1</small></button>
+            <button class="choice" data-i="1"><b id="c1">-</b><small class="mono">2</small></button>
+            <button class="choice" data-i="2"><b id="c2">-</b><small class="mono">3</small></button>
+            <button class="choice" data-i="3"><b id="c3">-</b><small class="mono">4</small></button>
+          </div>
+                    <p class="hint" style="margin:10px 0 0">
+            落ちてくる単語に対して、正しい意味を選ぶと撃ち落とせます。正解でコンボUP、ミスでHP減。<br>
+            間違えた単語は「復習語」としてプールされ、一定数進むと<strong>ボス</strong>として再登場します 🐉📚
+          </p>
+        </div>
+
+        <div id="typingPanel" style="display:none">
+          <div class="typingRow">
+            <input id="typeInput" type="text" placeholder="ここに英単語を入力してEnter（例: adventure）" autocomplete="off" spellcheck="false" />
+            <button id="btnEnter" class="btn primary">Enter</button>
+            <button id="btnReveal" class="btn">答えを見る</button>
+          </div>
+          <div id="typeMirror" class="typeMirror mono" aria-live="polite"></div>
+          <div id="typeAnswerLive" class="typeAnswerLive" aria-live="assertive"></div>
+          <div id="mobileTypingPad" class="mobileTypingPad" aria-label="スマホ用英字パッド">
+            <p class="padHint">スマホでは下の英字パッドで入力します。パソコンは今まで通りキーボード入力です。</p>
+            <div id="mobileTypingPadGrid" class="mobileTypingPadGrid"></div>
+            <div class="mobileTypingPadActions">
+              <button type="button" class="mobileKeyBtn action" data-pad-action="back">⌫ 1文字消す</button>
+              <button type="button" class="mobileKeyBtn action" data-pad-action="clear">クリア</button>
+            </div>
+          </div>
+          <p class="hint" style="margin:10px 0 0">
+            タイピングモードでは、落ちてくる「日本語」を見て英単語を入力します。<br>
+            入力は大文字小文字無視。空白の違いもあるので、CSV側の表記に合わせると安定します。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="card">
+    <div class="hd">
+      <h2>ロード & 結果</h2>
+      <div class="row">
+        <button id="btnOpenLoader" class="btn small">CSV読み込み</button>
+        <button id="btnOpenResults" class="btn small">結果</button>
+      </div>
+    </div>
+    <div class="bd">
+      <div class="row" style="gap:8px; align-items:flex-start">
+        <div class="pill"><strong>単語数</strong><span id="hudCount" class="mono">0</span></div>
+        <div class="pill"><strong>復習語</strong><span id="hudWrongPool" class="mono">0</span></div>
+        <div class="pill"><strong>最高</strong><span id="hudBest" class="mono">0</span></div>
+      </div>
+
+      <div style="margin-top:10px" class="hint">
+        <div><strong>対応CSV例</strong></div>
+        <div class="mono tiny">en,ja,level,lang</div>
+        <div class="mono tiny">adjustment,調整,5,en</div>
+        <div class="mono tiny">gratitude,感謝,4,en</div>
+        <div class="mono tiny">…（levelは空でもOK）</div>
+        <div style="margin-top:8px"><strong>ヒント</strong>：単語塾のCSVをそのまま入れてOK。ja列がない場合は、en列だけでも遊べます（意味はダミー表示）。</div>
+      </div>
+
+      <div style="margin-top:12px; border-top:1px dashed var(--line); padding-top:12px">
+        <div class="row" style="justify-content:space-between">
+          <div><strong>ゲームの難易度</strong></div>
+          <span class="tiny muted">スピードはプレイ中に自動変化</span>
+        </div>
+        <div class="row" style="margin-top:8px; gap:10px">
+          <label class="pill"><strong>HP</strong><span><input id="optHp" type="number" min="1" max="20" value="5" style="width:70px"></span></label>
+          <label class="pill"><strong>同時落下</strong><span><input id="optMaxEnemies" type="number" min="1" max="10" value="3" style="width:70px"></span></label>
+        </div>
+        <div class="row" style="margin-top:8px; gap:10px; flex-wrap:wrap">
+          <label class="pill"><strong>スピード</strong>
+            <span class="mono">
+              <input id="optSpeedRange" type="range" min="40" max="360" value="120" style="width:180px; vertical-align:middle">
+              <input id="optSpeedNum" type="number" min="40" max="360" value="120" style="width:84px; margin-left:8px"> <span class="tiny muted">px/秒</span>
+            </span>
+          </label>
+        </div>
+        <div class="row" style="margin-top:8px; gap:10px">
+          <label class="pill"><strong>モード</strong>
+            <span>
+              <select id="optMode" style="padding:8px; border-radius:12px; border:1px solid var(--line); background: rgba(0,0,0,.25); color:var(--ink)">
+                <option value="choice" selected>4択</option>
+                <option value="typing">タイピング（ja→en）</option>
+              </select>
+            </span>
+          </label>
+        </div>
+        <div class="row" style="margin-top:8px; gap:10px; flex-wrap:wrap">
+          <label class="pill"><strong>4択の出題</strong>
+            <span>
+              <select id="optChoiceDir" style="padding:8px; border-radius:12px; border:1px solid var(--line); background: rgba(0,0,0,.25); color:var(--ink)">
+                <option value="en2ja" selected>英語 → 日本語（選択）</option>
+                <option value="ja2en">日本語 → 英語（選択）</option>
+              </select>
+            </span>
+          </label>
+        </div>
+
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- Overlays -->
+<div id="ovHelp" class="overlay">
+  <div class="panel">
+    <div class="hd">
+      <strong>使い方</strong>
+      <button class="btn small" data-close="ovHelp">閉じる</button>
+    </div>
+    <div class="bd">
+      <div class="grid2">
+        <div class="card" style="box-shadow:none">
+          <div class="hd"><h2>基本</h2></div>
+          <div class="bd">
+            <ul style="margin:0; padding-left:18px; line-height:1.6">
+              <li><strong>スタート</strong>で開始。単語が上から落ちてきます。</li>
+              <li><strong>4択</strong>：正しい意味をクリック or <span class="kbd">1</span>〜<span class="kbd">4</span>で選択。</li>
+              <li><strong>タイピング</strong>：落ちてくる日本語を見て英単語を入力し <span class="kbd">Enter</span>。</li>
+              <li>正解でコンボが伸び、ミスでHPが削れます。</li>
+              <li>間違えた単語は復習語プールへ。一定数進むと<strong>ボス戦</strong>が発生。</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card" style="box-shadow:none">
+          <div class="hd"><h2>CSV読み込み</h2></div>
+          <div class="bd">
+            <ul style="margin:0; padding-left:18px; line-height:1.6">
+              <li>ヘッダー推奨：<span class="mono">en,ja,level,lang</span></li>
+              <li><span class="mono">lang</span> は <span class="mono">en</span>/<span class="mono">ja</span>/<span class="mono">fr</span>…など（音声の言語ヒント）。</li>
+              <li><span class="mono">level</span> は 1〜5 など。空でもOK。</li>
+              <li>区切りはカンマ。Excelで作るならUTF-8保存がおすすめ。</li>
+            </ul>
+            <div class="tiny muted" style="margin-top:8px">
+              ※ 既存の単語塾CSVに列が増えていても大丈夫。<strong>en と ja</strong> が取れれば遊べます。
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px" class="tiny muted">
+        裏技: <span class="kbd">Space</span> で一時停止。<span class="kbd">R</span> でリスタート。
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="ovLoader" class="overlay">
+  <div class="panel">
+    <div class="hd">
+      <strong>CSV読み込み</strong>
+      <button class="btn small" data-close="ovLoader">閉じる</button>
+    </div>
+    <div class="bd">
+      <div class="grid2">
+        <div>
+          <div class="row" style="gap:10px; align-items:center">
+            <input id="fileCsv" type="file" accept=".csv,text/csv" />
+            <button id="btnLoadFile" class="btn primary">読み込み</button>
+          </div>
+          <div class="tiny muted" style="margin-top:8px">
+            ローカルファイルをブラウザに読み込みます（外部送信なし）。
+          </div>
+          <div style="margin-top:10px">
+            <div><strong>プレビュー（先頭10行）</strong></div>
+            <pre id="csvPreview" class="mono" style="white-space:pre-wrap; background: rgba(0,0,0,.25); border:1px solid var(--line); border-radius:14px; padding:10px; max-height:220px; overflow:auto; margin:8px 0 0;"></pre>
+          </div>
+        </div>
+        <div>
+          <div><strong>手貼りでもOK</strong>（CSVをコピペ）</div>
+          <textarea id="csvText" placeholder="en,ja,level,lang&#10;gratitude,感謝,4,en"></textarea>
+          <div class="row" style="justify-content:flex-end; margin-top:10px">
+            <button id="btnLoadText" class="btn primary">貼り付けを読み込み</button>
+          </div>
+          <div class="tiny muted">
+            Excelからの貼り付けでタブ区切りになる場合は、設定で区切りを変更してもOK（右上設定）。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="ovSettings" class="overlay">
+  <div class="panel">
+    <div class="hd">
+      <strong>設定</strong>
+      <button class="btn small" data-close="ovSettings">閉じる</button>
+    </div>
+    <div class="bd">
+      <div class="grid2">
+        <div>
+          <div class="card" style="box-shadow:none">
+            <div class="hd"><h2>ゲーム</h2></div>
+            <div class="bd">
+              <div class="row" style="gap:10px; flex-wrap:wrap">
+                <label class="pill"><strong>落下速度</strong>
+                  <span>
+                    <input id="setBaseSpeed" type="number" min="40" max="360" value="120" style="width:90px"> <span class="tiny muted">px/秒</span>
+                  </span>
+                </label>
+                <label class="pill"><strong>出現間隔</strong>
+                  <span>
+                    <input id="setSpawnMs" type="number" min="300" max="3000" value="900" style="width:90px"> <span class="tiny muted">ms</span>
+                  </span>
+                </label>
+              </div>
+              <div class="row" style="gap:10px; margin-top:10px">
+                <label class="pill"><strong>区切り文字</strong>
+                  <span>
+                    <select id="setDelimiter" style="padding:8px; border-radius:12px; border:1px solid var(--line); background: rgba(0,0,0,.25); color:var(--ink)">
+                      <option value=",">カンマ (,)</option>
+                      <option value="tab">タブ</option>
+                      <option value=";">セミコロン (;)</option>
+                    </select>
+                  </span>
+                </label>
+                <label class="pill"><strong>ボス頻度</strong>
+                  <span>
+                    <input id="setBossEvery" type="number" min="5" max="50" value="15" style="width:90px"> <span class="tiny muted">撃破ごと</span>
+                  </span>
+                </label>
+              </div>
+              <div class="row" style="gap:10px; margin-top:10px">
+                <label class="pill"><strong>ボスHP</strong>
+                  <span>
+                    <input id="setBossHp" type="number" min="1" max="20" value="6" style="width:90px">
+                  </span>
+                </label>
+                <label class="pill"><strong>復習語の重み</strong>
+                  <span>
+                    <input id="setWrongWeight" type="number" min="1" max="10" value="3" style="width:90px">
+                  </span>
+                </label>
+              </div>
+              <div class="tiny muted" style="margin-top:10px">
+                ※ 復習語の重み：間違えた単語が再出現しやすくなる倍率です。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" style="box-shadow:none">
+            <div class="hd"><h2>音声（SpeechSynthesis）</h2></div>
+            <div class="bd">
+              <div class="row" style="gap:10px; flex-wrap:wrap">
+                <label class="pill"><strong>自動発音</strong>
+                  <span><input id="setAutoSpeak" type="checkbox" checked></span>
+                </label>
+                <label class="pill"><strong>発音対象</strong>
+                  <span>
+                    <select id="setSpeakWhich" style="padding:8px; border-radius:12px; border:1px solid var(--line); background: rgba(0,0,0,.25); color:var(--ink)">
+                      <option value="en" selected>英語（en列）</option>
+                      <option value="ja">日本語（ja列）</option>
+                    </select>
+                  </span>
+                </label>
+              </div>
+
+              <div class="row" style="gap:10px; margin-top:10px; flex-wrap:wrap">
+                <label class="pill"><strong>音声言語</strong>
+                  <span>
+                    <select id="setVoiceLang" style="padding:8px; border-radius:12px; border:1px solid var(--line); background: rgba(0,0,0,.25); color:var(--ink)">
+                      <option value="auto" selected>自動（lang列を優先）</option>
+                      <option value="en">英語 (en)</option>
+                      <option value="ja">日本語 (ja)</option>
+                      <option value="fr">フランス語 (fr)</option>
+                      <option value="de">ドイツ語 (de)</option>
+                      <option value="es">スペイン語 (es)</option>
+                      <option value="it">イタリア語 (it)</option>
+                      <option value="ko">韓国語 (ko)</option>
+                      <option value="zh">中国語 (zh)</option>
+                    </select>
+                  </span>
+                </label>
+
+                <label class="pill"><strong>速度</strong>
+                  <span><input id="setRate" type="number" min="0.5" max="1.5" step="0.1" value="1.0" style="width:90px"></span>
+                </label>
+                <label class="pill"><strong>高さ</strong>
+                  <span><input id="setPitch" type="number" min="0.5" max="1.5" step="0.1" value="1.0" style="width:90px"></span>
+                </label>
+              </div>
+
+              <div class="row" style="justify-content:flex-end; margin-top:12px">
+                <button id="btnApplySettings" class="btn primary">適用</button>
+              </div>
+              <div class="tiny muted" style="margin-top:10px">
+                ※ ブラウザや端末によって音声の質が変わります（特にスマホは端末内の音声エンジンの影響が大きいです）。
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="justify-content:space-between; margin-top:12px">
+        <button id="btnResetBest" class="btn danger">最高スコアをリセット</button>
+        <span class="tiny muted">設定はこのブラウザに保存されます（localStorage）</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="ovResults" class="overlay">
+  <div class="panel">
+    <div class="hd">
+      <strong>結果</strong>
+      <button class="btn small" data-close="ovResults">閉じる</button>
+    </div>
+    <div class="bd">
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <div class="pill"><strong>今回</strong><span id="resScore" class="mono">0</span></div>
+          <div class="pill"><strong>命中</strong><span id="resAcc" class="mono">0%</span></div>
+          <div class="pill"><strong>ベスト</strong><span id="resBest" class="mono">0</span></div>
+        </div>
+        <div class="row" style="gap:8px">
+          <button id="btnExportWrong" class="btn">復習語をCSVで出力</button>
+          <button id="btnClearStats" class="btn danger">今回の履歴をクリア</button>
+        </div>
+      </div>
+
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <div class="pill"><strong>今回順位</strong><span id="resRank" class="mono">-</span></div>
+          <div class="pill"><strong>今日順位</strong><span id="resRankDay" class="mono">-</span></div>
+          <div class="pill"><strong>対象</strong><span id="resRankCsv" class="mono">-</span></div>
+        </div>
+        <div class="row" style="gap:8px">
+          <button id="btnOpenRank" class="btn">ランキング</button>
+        </div>
+      </div>
+      <div style="overflow:auto; border:1px solid var(--line); border-radius:16px">
+        <table>
+          <thead>
+            <tr>
+              <th>単語</th>
+              <th>意味</th>
+              <th class="right">正</th>
+              <th class="right">誤</th>
+              <th class="right">最終</th>
+            </tr>
+          </thead>
+          <tbody id="resTable"></tbody>
+        </table>
+      </div>
+      <div class="tiny muted" style="margin-top:10px">
+        「復習語をCSVで出力」は、間違えた単語を <span class="mono">en,ja,level,lang</span> で吐き出します。単語塾に戻して再投入できます 🔁
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+(() => {
+  "use strict";
+
+
+  // ----------------------------
+  // Mobile: fit stage to visible viewport (prevents "game screen is hidden")
+  // ----------------------------
+  const fitStageToViewport = () => {
+    const header = document.querySelector("header");
+    const stageWrap = document.querySelector("#stageWrap");
+    if(!header || !stageWrap) return;
+
+    // visualViewport is best on mobile (accounts for URL bar / keyboard)
+    const vv = window.visualViewport;
+    const vh = vv ? vv.height : window.innerHeight;
+
+    const headerH = header.getBoundingClientRect().height;
+
+    // Estimated non-stage vertical space inside the main card below stage (answer UI etc.)
+    // Keep it conservative so the stage stays comfortably visible.
+    const other = 190;
+
+    let avail = vh - headerH - other;
+
+    // Clamp stage height: not too tiny, not too huge
+    const h = Math.max(280, Math.min(680, Math.floor(avail)));
+
+    // Apply if it makes sense
+    if(Number.isFinite(h) && h > 0){
+      stageWrap.style.height = h + "px";
+    }
+  };
+
+  // Run on load + when viewport changes (URL bar, rotate, keyboard)
+  window.addEventListener("resize", fitStageToViewport, {passive:true});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize", fitStageToViewport, {passive:true});
+    window.visualViewport.addEventListener("scroll", fitStageToViewport, {passive:true});
+  }
+  fitStageToViewport();
+
+
+  // ----------------------------
+  // Small helpers
+  // ----------------------------
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const now = () => performance.now();
+  const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
+  const uniq = (arr) => [...new Set(arr)];
+  const norm = (s) => (s ?? "").toString().trim();
+  const normKey = (s) => norm(s).toLowerCase().replace(/\s+/g, " ").trim();
+  const safeInt = (x, d=0) => {
+    const n = parseInt(x, 10);
+    return Number.isFinite(n) ? n : d;
+  };
+
+  // ----------------------------
+  // Audio + FX feedback (miss / drop-miss)
+  //   - Miss (wrong answer): low "buzz"
+  //   - Drop miss (passed the bottom): falling "whoosh" down to "thud"
+  // NOTE: browsers require a user gesture before audio starts; we "unlock" on first click/start.
+  // ----------------------------
+  let audioCtx = null;
+
+  function getAudioCtx(){
+    if(audioCtx) return audioCtx;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return null;
+    audioCtx = new Ctx();
+    return audioCtx;
+  }
+
+  function unlockAudio(){
+    const ctx = getAudioCtx();
+    if(!ctx) return;
+    if(ctx.state === "suspended"){
+      ctx.resume().catch(()=>{});
+    }
+  }
+
+  // Try to unlock on any first gesture
+  document.addEventListener("pointerdown", unlockAudio, {passive:true, once:true});
+  document.addEventListener("keydown", unlockAudio, {passive:true, once:true});
+
+  function playMissSound(){
+    const ctx = getAudioCtx();
+    if(!ctx) return;
+    unlockAudio();
+
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "square";
+    o.frequency.setValueAtTime(180, ctx.currentTime);
+
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+
+    o.connect(g).connect(ctx.destination);
+    o.start();
+    o.stop(ctx.currentTime + 0.24);
+  }
+
+  function playDropMissSound(){
+    const ctx = getAudioCtx();
+    if(!ctx) return;
+    unlockAudio();
+
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sawtooth";
+
+    // Whoosh down
+    o.frequency.setValueAtTime(640, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 0.32);
+
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.34);
+
+    o.connect(g).connect(ctx.destination);
+    o.start();
+    o.stop(ctx.currentTime + 0.36);
+  }
+
+  function flashBottomMiss(label="MISS!"){
+    const f = document.createElement("div");
+    f.textContent = label;
+    f.style.cssText = `
+      position: fixed;
+      left: 50%;
+      bottom: calc(40px + var(--sab));
+      transform: translateX(-50%);
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      color: var(--bad);
+      text-shadow: 0 0 12px rgba(255,92,122,.75);
+      z-index: 110;
+      pointer-events: none;
+      animation: fadeUp .6s ease-out forwards;
+    `;
+    document.body.appendChild(f);
+    setTimeout(()=>{ try{ f.remove(); }catch{} }, 650);
+  }
+
+  function flashBottomAnswer(label="正解: "){
+    const f = document.createElement("div");
+    f.textContent = label;
+    f.style.cssText = `
+      position: fixed;
+      left: 50%;
+      bottom: calc(14px + var(--sab));
+      transform: translateX(-50%);
+      max-width: min(90vw, 520px);
+      padding: 8px 16px;
+      border-radius: 16px;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: .02em;
+      line-height: 1.2;
+      color: #fff7d1;
+      background: rgba(255,92,122,.18);
+      border: 1px solid rgba(255,92,122,.38);
+      text-shadow: 0 0 12px rgba(255,216,102,.65);
+      box-shadow: 0 0 18px rgba(255,92,122,.18);
+      z-index: 109;
+      pointer-events: none;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      animation: fadeUpAnswer 1.9s ease-out forwards;
+    `;
+    document.body.appendChild(f);
+    setTimeout(()=>{ try{ f.remove(); }catch{} }, 1950);
+  }
+
+  function flashBottomMissWithAnswer(missLabel="MISS!", answerLabel="正解: "){
+    const wrap = document.createElement("div");
+    wrap.style.cssText = `
+      position: fixed;
+      left: 50%;
+      bottom: calc(12px + var(--sab));
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      z-index: 111;
+      pointer-events: none;
+      animation: fadeUpAnswer 1.95s ease-out forwards;
+    `;
+
+    const miss = document.createElement("div");
+    miss.textContent = missLabel;
+    miss.style.cssText = `
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      color: var(--bad);
+      text-shadow: 0 0 12px rgba(255,92,122,.75);
+      line-height: 1;
+    `;
+
+    const answer = document.createElement("div");
+    answer.textContent = answerLabel;
+    answer.style.cssText = `
+      max-width: min(90vw, 520px);
+      padding: 8px 16px;
+      border-radius: 16px;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: .02em;
+      line-height: 1.2;
+      color: #fff7d1;
+      background: rgba(255,92,122,.18);
+      border: 1px solid rgba(255,92,122,.38);
+      text-shadow: 0 0 12px rgba(255,216,102,.65);
+      box-shadow: 0 0 18px rgba(255,92,122,.18);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    `;
+
+    wrap.appendChild(miss);
+    wrap.appendChild(answer);
+    document.body.appendChild(wrap);
+    setTimeout(()=>{ try{ wrap.remove(); }catch{} }, 2000);
+  }
+
+
+  // ----------------------------
+  // DOM
+  // ----------------------------
+  const stage = $("#stage");
+  const hudScore = $("#hudScore");
+  const hudCombo = $("#hudCombo");
+  const hudAcc = $("#hudAcc");
+  const hudCsv = $("#hudCsv");
+  let baseCsvLabel = "内蔵サンプル";
+  const hudCount = $("#hudCount");
+  const hudWrongPool = $("#hudWrongPool");
+  const hudBest = $("#hudBest");
+  const hudMode = $("#hudMode");
+  const hudTarget = $("#hudTarget");
+
+  const hpBar = $("#hpBar");
+  const hpTxt = $("#hpTxt");
+
+  const bossHud = $("#bossHud");
+  const bossBar = $("#bossBar");
+  const bossTxt = $("#bossTxt");
+
+  const btnStart = $("#btnStart");
+  const btnPause = $("#btnPause");
+  const btnRestart = $("#btnRestart");
+  const btnSkip = $("#btnSkip");
+  const btnSpeak = $("#btnSpeak");
+
+  const choicePanel = $("#choicePanel");
+  const typingPanel = $("#typingPanel");
+  const typeInput = $("#typeInput");
+  const typeMirror = $("#typeMirror");
+  const btnEnter = $("#btnEnter");
+  const btnReveal = $("#btnReveal");
+  const typeAnswerLive = $("#typeAnswerLive");
+  const mobileTypingPad = $("#mobileTypingPad");
+  const mobileTypingPadGrid = $("#mobileTypingPadGrid");
+
+  const cEls = [$("#c0"), $("#c1"), $("#c2"), $("#c3")];
+  const choiceBtns = $$(".choice");
+
+  // overlays
+  const ovHelp = $("#ovHelp");
+  const ovLoader = $("#ovLoader");
+  const ovSettings = $("#ovSettings");
+  const ovResults = $("#ovResults");
+
+  // loader
+  const fileCsv = $("#fileCsv");
+  const btnLoadFile = $("#btnLoadFile");
+  const btnLoadText = $("#btnLoadText");
+  const csvText = $("#csvText");
+  const csvPreview = $("#csvPreview");
+
+  // settings quick (aside)
+  const optHp = $("#optHp");
+  const optMaxEnemies = $("#optMaxEnemies");
+  const optMode = $("#optMode");
+  const optChoiceDir = $("#optChoiceDir");
+  const optSpeedRange = $("#optSpeedRange");
+  const optSpeedNum = $("#optSpeedNum");
+
+  // settings overlay
+  const setBaseSpeed = $("#setBaseSpeed");
+  const setSpawnMs = $("#setSpawnMs");
+  const setDelimiter = $("#setDelimiter");
+  const setBossEvery = $("#setBossEvery");
+  const setBossHp = $("#setBossHp");
+  const setWrongWeight = $("#setWrongWeight");
+
+  const setAutoSpeak = $("#setAutoSpeak");
+  const setSpeakWhich = $("#setSpeakWhich");
+  const setVoiceLang = $("#setVoiceLang");
+  const setRate = $("#setRate");
+  const setPitch = $("#setPitch");
+
+  const btnApplySettings = $("#btnApplySettings");
+  const btnResetBest = $("#btnResetBest");
+
+  // results
+  const btnExportWrong = $("#btnExportWrong");
+  const btnClearStats = $("#btnClearStats");
+  const resScore = $("#resScore");
+  const resAcc = $("#resAcc");
+  const resBest = $("#resBest");
+  const resTable = $("#resTable");
+  const resRank = $("#resRank");
+  const resRankDay = $("#resRankDay");
+  const resRankCsv = $("#resRankCsv");
+  const btnOpenRank = $("#btnOpenRank");
+
+  // rank overlay
+  const ovRank = $("#ovRank");
+  const tabRankSession = $("#tabRankSession");
+  const tabRankWords = $("#tabRankWords");
+  const tabRankDaily = $("#tabRankDaily");
+  const rankScope = $("#rankScope");
+  const rankLabel = $("#rankLabel");
+  const rankLabel2 = $("#rankLabel2");
+  const rankLabel3 = $("#rankLabel3");
+  const rankSessionTable = $("#rankSessionTable");
+  const rankWordTable = $("#rankWordTable");
+  const rankDailyTable = $("#rankDailyTable");
+  const rankViewSession = $("#rankViewSession");
+  const rankViewWords = $("#rankViewWords");
+  const rankViewDaily = $("#rankViewDaily");
+
+  // top buttons
+  $("#btnHelp").addEventListener("click", () => openOverlay(ovHelp));
+  $("#btnSettings").addEventListener("click", () => openOverlay(ovSettings));
+  $("#btnOpenLoader").addEventListener("click", () => openOverlay(ovLoader));
+  $("#btnOpenResults").addEventListener("click", () => { refreshResults(); openOverlay(ovResults); });
+  btnOpenRank.addEventListener("click", () => { refreshRankUI(); openOverlay(ovRank); });
+
+  $$(".overlay [data-close]").forEach(btn => {
+    btn.addEventListener("click", (e) => closeOverlay($("#" + e.currentTarget.dataset.close)));
+  });
+  $$(".overlay").forEach(ov => {
+    ov.addEventListener("click", (e) => { if(e.target === ov) closeOverlay(ov); });
+  });
+
+  function openOverlay(ov){ ov.style.display = "block"; }
+  function closeOverlay(ov){ ov.style.display = "none"; }
+
+  // ----------------------------
+  // Data model
+  // ----------------------------
+  const DEFAULT_WORDS = [
+    ["gratitude","感謝",4,"en"],
+    ["adjustment","調整",5,"en"],
+    ["endurance","持久力",4,"en"],
+    ["recruitment","採用",4,"en"],
+    ["invasion","侵略",4,"en"],
+    ["suite","スイート（部屋）／一式",4,"en"],
+    ["addressee","宛先人",5,"en"],
+    ["opening","開始／開口部",2,"en"],
+    ["tune-up","調整／点検",5,"en"],
+    ["pharmacist","薬剤師",4,"en"],
+    ["uniformity","均一性",5,"en"],
+    ["conception","概念／受胎",5,"en"],
+    ["orbit","軌道",4,"en"],
+    ["workload","仕事量",3,"en"],
+    ["closure","閉鎖／終結",4,"en"],
+    ["duplicate","複製する／重複",3,"en"],
+    ["inferiority","劣等",5,"en"],
+    ["machinist","機械工",5,"en"],
+    ["removal","除去",3,"en"],
+    ["shield","盾／守る",3,"en"],
+    ["attendant","係員",4,"en"],
+    ["chill","寒気／冷える",4,"en"],
+    ["steadily","着実に",3,"en"],
+    ["roughly","おおよそ",2,"en"],
+    ["beneficial","有益な",3,"en"],
+    ["urgently","緊急に",3,"en"],
+    ["evidently","明らかに",4,"en"],
+    ["accidentally","偶然に",2,"en"],
+    ["eventually","結局は",2,"en"],
+    ["barely","かろうじて",3,"en"],
+    ["brilliantly","見事に",4,"en"],
+    ["specifically","具体的に",3,"en"],
+    ["indefinitely","無期限に",5,"en"],
+    ["sincere","誠実な",3,"en"],
+    ["scarce","不足した",4,"en"],
+    ["defensive","防御の",3,"en"],
+    ["illustrated","挿絵入りの／説明した",4,"en"],
+    ["passage","一節／通路",3,"en"],
+    ["remote","遠隔の",2,"en"],
+    ["modest","控えめな",2,"en"],
+  ];
+
+  // Typing is hard with long words. This pack is intentionally short (3-4 letters).
+  const EASY_WORDS = [
+    ["cat","猫",1,"en"], ["dog","犬",1,"en"], ["sun","太陽",1,"en"], ["sky","空",1,"en"],
+    ["book","本",1,"en"], ["desk","机",1,"en"], ["milk","牛乳",1,"en"], ["cake","ケーキ",1,"en"],
+    ["bird","鳥",1,"en"], ["fish","魚",1,"en"], ["rain","雨",1,"en"], ["snow","雪",1,"en"],
+    ["tree","木",1,"en"], ["road","道",1,"en"], ["hand","手",1,"en"], ["foot","足",1,"en"],
+    ["slow","遅い",1,"en"], ["fast","速い",1,"en"], ["good","良い",1,"en"], ["cool","かっこいい／涼しい",1,"en"],
+    ["warm","暖かい",1,"en"], ["hard","難しい／硬い",1,"en"], ["easy","簡単な",1,"en"], ["kind","親切な",1,"en"],
+    ["play","遊ぶ",1,"en"], ["walk","歩く",1,"en"], ["sing","歌う",1,"en"], ["jump","跳ぶ",1,"en"],
+    ["open","開ける",1,"en"], ["close","閉める",1,"en"], ["help","助ける",1,"en"], ["give","与える",1,"en"],
+    ["take","取る",1,"en"], ["come","来る",1,"en"], ["go","行く",1,"en"], ["read","読む",1,"en"],
+    ["write","書く",1,"en"], ["talk","話す",1,"en"], ["hear","聞く",1,"en"], ["look","見る",1,"en"]
+  ];
+
+
+  // current vocabulary list
+  /** @type {{en:string, ja:string, level:number|null, lang:string|null}[]} */
+  let vocab = DEFAULT_WORDS.map(([en,ja,lv,lang]) => ({en,ja,level:lv ?? null, lang: lang ?? null}));
+
+
+  // In typing mode we use a simplified pool (short words) so it feels playable.
+  /** @type {{en:string, ja:string, level:number|null, lang:string|null}[]} */
+  let typingVocab = [];
+  /** @type {{en:string, ja:string, level:number|null, lang:string|null}[]} */
+  let activeVocab = vocab;
+  updateDatasetId();
+
+  function onlyLettersLen(en){
+    const letters = (en ?? "").toString().replace(/[^a-z]/ig, "");
+    return letters.length;
+  }
+
+  function buildTypingVocab(){
+    // Prefer the user's CSV words, but only 3-4 letter ones.
+    const short = vocab.filter(v => {
+      const L = onlyLettersLen(v.en);
+      return L >= 3 && L <= 4;
+    });
+
+    // If not enough, add built-in EASY_WORDS (still 3-4 letters).
+    const easy = EASY_WORDS.map(([en,ja,lv,lang]) => ({en,ja,level:lv ?? null, lang: lang ?? null}));
+
+    const merged = [];
+    const seen = new Set();
+    const pushUniq = (it) => {
+      const k = (it.en||"").toLowerCase().trim();
+      if(!k || seen.has(k)) return;
+      seen.add(k);
+      merged.push(it);
+    };
+
+    short.forEach(pushUniq);
+    easy.forEach(pushUniq);
+
+    return merged.length ? merged : easy;
+  }
+
+  function setActiveVocabForMode(){
+    if(mode === "typing"){
+      typingVocab = buildTypingVocab();
+      activeVocab = typingVocab;
+      hudCsv.textContent = baseCsvLabel + " / タイピング簡単語";
+      hudCount.textContent = String(activeVocab.length);
+    }else{
+      activeVocab = vocab;
+      hudCsv.textContent = baseCsvLabel;
+      hudCount.textContent = String(activeVocab.length);
+    }
+  }
+
+  // stats per word
+  /** key -> {en,ja,level,lang, correct:number, wrong:number, last:string} */
+  let stats = {};  // in-memory for this run
+  // wrong pool: key -> wrongCount (for spawn weighting and boss list)
+  let wrongPool = {};
+
+  // settings stored
+  const LS_KEY = "tangojuku_arcade_v1";
+  const defaultSettings = {
+    baseSpeed: 120,      // px/s
+    spawnMs: 900,
+    delimiter: ",",
+    bossEvery: 15,       // kills
+    bossHp: 6,
+    wrongWeight: 3,      // spawn weight multiplier per wrongCount
+    autoSpeak: true,
+    speakWhich: "en",    // en or ja
+    voiceLang: "auto",
+    rate: 1.0,
+    pitch: 1.0,
+    choiceDirection: "en2ja",  // 4択: en->ja or ja->en
+    bestScore: 0
+  };
+  let settings = loadSettings();
+
+  function loadSettings(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(!raw) return {...defaultSettings};
+      const obj = JSON.parse(raw);
+      return {...defaultSettings, ...obj};
+    }catch{
+      return {...defaultSettings};
+    }
+  }
+  function saveSettings(){
+    localStorage.setItem(LS_KEY, JSON.stringify(settings));
+    hudBest.textContent = settings.bestScore|0;
+  }
+
+  // apply settings to UI
+  function syncSettingsUI(){
+    setBaseSpeed.value = settings.baseSpeed;
+    // aside quick speed controls
+    if(typeof syncSpeedUIFromSettings === "function"){ syncSpeedUIFromSettings(); }
+    setSpawnMs.value = settings.spawnMs;
+    setDelimiter.value = settings.delimiter === "\t" ? "tab" : settings.delimiter;
+    setBossEvery.value = settings.bossEvery;
+    setBossHp.value = settings.bossHp;
+    setWrongWeight.value = settings.wrongWeight;
+
+    setAutoSpeak.checked = !!settings.autoSpeak;
+    setSpeakWhich.value = settings.speakWhich;
+    setVoiceLang.value = settings.voiceLang;
+    setRate.value = settings.rate;
+    setPitch.value = settings.pitch;
+
+    // choice direction
+    if(optChoiceDir) optChoiceDir.value = settings.choiceDirection || "en2ja";
+
+    hudBest.textContent = settings.bestScore|0;
+  }
+
+
+  // ----------------------------
+  // Ranking persistence (per CSV + all CSV)
+  // ----------------------------
+  const LS_RANK_KEY = "tangojuku_arcade_rank_v1";
+
+  function fnv1a(str){
+    let h = 0x811c9dc5;
+    for(let i=0;i<str.length;i++){
+      h ^= str.charCodeAt(i);
+      h = (h + ((h<<1) + (h<<4) + (h<<7) + (h<<8) + (h<<24))) >>> 0;
+    }
+    return ("0000000" + h.toString(16)).slice(-8);
+  }
+
+  function datasetFingerprint(){
+    // hash en+ja; sample first 1200 lines to keep fast
+    const parts = [];
+    const take = Math.min(vocab.length, 1200);
+    for(let i=0;i<take;i++){
+      const it = vocab[i];
+      parts.push((it.en||"").toLowerCase().trim() + "|" + (it.ja||"").trim());
+    }
+    return fnv1a(parts.join("\n"));
+  }
+
+  var datasetId = "";
+  function updateDatasetId(){
+    datasetId = datasetFingerprint();
+  }
+
+  function loadRankStore(){
+    try{
+      const raw = localStorage.getItem(LS_RANK_KEY);
+      if(!raw) return {datasets:{}, allSessions:[], allWord:{}};
+      const obj = JSON.parse(raw);
+      if(!obj.datasets) obj.datasets = {};
+      if(!Array.isArray(obj.allSessions)) obj.allSessions = [];
+      if(!obj.allWord) obj.allWord = {};
+      return obj;
+    }catch{
+      return {datasets:{}, allSessions:[], allWord:{}};
+    }
+  }
+  function saveRankStore(store){
+    try{ localStorage.setItem(LS_RANK_KEY, JSON.stringify(store)); }catch{}
+  }
+
+  function getDs(store, id){
+    if(!store.datasets[id]){
+      store.datasets[id] = { label: baseCsvLabel, sessions:[], word:{} };
+    }
+    store.datasets[id].label = baseCsvLabel;
+    return store.datasets[id];
+  }
+
+  function todayKey(ts){
+    const d = new Date(ts);
+    const y = d.getFullYear();
+    const m = ("0"+(d.getMonth()+1)).slice(-2);
+    const dd = ("0"+d.getDate()).slice(-2);
+    return `${y}-${m}-${dd}`;
+  }
+
+  function computeRank(list, sc){
+    let higher = 0;
+    for(const s of list){
+      if((s.score|0) > (sc|0)) higher++;
+    }
+    return higher + 1;
+  }
+
+  function recordSession(){
+    updateDatasetId();
+    const store = loadRankStore();
+    const ds = getDs(store, datasetId);
+
+    const acc = seen ? Math.round((hit/seen)*100) : 0;
+    const rec = {
+      ts: Date.now(),
+      score: score|0,
+      acc,
+      mode,
+      dir: settings.choiceDirection || "en2ja",
+      words: (activeVocab?.length || vocab.length || 0),
+      label: baseCsvLabel
+    };
+
+    ds.sessions.unshift(rec);
+    if(ds.sessions.length > 200) ds.sessions.length = 200;
+
+    store.allSessions.unshift({...rec, datasetId});
+    if(store.allSessions.length > 400) store.allSessions.length = 400;
+
+    for(const k of Object.keys(stats)){
+      const st = stats[k];
+
+      if(!ds.word[k]) ds.word[k] = {en:st.en, ja:st.ja, correct:0, wrong:0};
+      ds.word[k].correct += (st.correct|0);
+      ds.word[k].wrong += (st.wrong|0);
+      ds.word[k].en = st.en; ds.word[k].ja = st.ja;
+
+      if(!store.allWord[k]) store.allWord[k] = {en:st.en, ja:st.ja, correct:0, wrong:0};
+      store.allWord[k].correct += (st.correct|0);
+      store.allWord[k].wrong += (st.wrong|0);
+      store.allWord[k].en = st.en; store.allWord[k].ja = st.ja;
+    }
+
+    saveRankStore(store);
+  }
+
+  function getRankSource(store){
+    const scope = (rankScope?.value || "csv");
+    if(scope === "all"){
+      return { label:"全CSV", sessions: store.allSessions || [], word: store.allWord || {} };
+    }
+    updateDatasetId();
+    const ds = getDs(store, datasetId);
+    return { label: ds.label || "このCSV", sessions: ds.sessions || [], word: ds.word || {} };
+  }
+
+  function showRankTab(which){
+    rankViewSession.style.display = (which==="session") ? "" : "none";
+    rankViewWords.style.display = (which==="words") ? "" : "none";
+    rankViewDaily.style.display = (which==="daily") ? "" : "none";
+
+    tabRankSession.classList.toggle("primary", which==="session");
+    tabRankWords.classList.toggle("primary", which==="words");
+    tabRankDaily.classList.toggle("primary", which==="daily");
+  }
+
+  tabRankSession?.addEventListener("click", () => { showRankTab("session"); refreshRankUI(); });
+  tabRankWords?.addEventListener("click", () => { showRankTab("words"); refreshRankUI(); });
+  tabRankDaily?.addEventListener("click", () => { showRankTab("daily"); refreshRankUI(); });
+  rankScope?.addEventListener("change", () => refreshRankUI());
+  // --- word ranking sort (clickable headers) ---
+  let rankWordSort = { key: "wrong", dir: "desc" }; // default: 誤が多い順
+
+  function setRankWordSort(key){
+    if(rankWordSort.key === key){
+      rankWordSort.dir = (rankWordSort.dir === "desc") ? "asc" : "desc";
+    }else{
+      rankWordSort.key = key;
+      rankWordSort.dir = (key === "acc") ? "asc" : "desc"; // 正解率は低い順がデフォ
+    }
+    refreshRankUI();
+  }
+
+  function updateRankWordSortUI(){
+    const hint = document.getElementById("rankWordSortHint");
+    const aC = document.getElementById("sortArrowCorrect");
+    const aW = document.getElementById("sortArrowWrong");
+    const aA = document.getElementById("sortArrowAcc");
+    if(aC) aC.textContent = "";
+    if(aW) aW.textContent = "";
+    if(aA) aA.textContent = "";
+
+    const arrow = (rankWordSort.dir === "desc") ? "▼" : "▲";
+    if(rankWordSort.key === "correct" && aC) aC.textContent = arrow;
+    if(rankWordSort.key === "wrong" && aW) aW.textContent = arrow;
+    if(rankWordSort.key === "acc" && aA) aA.textContent = arrow;
+
+    if(hint){
+      if(rankWordSort.key === "wrong") hint.textContent = `誤が多い順（誤${arrow} → 正解率 → ABC）`;
+      else if(rankWordSort.key === "correct") hint.textContent = `正が多い順（正${arrow} → 正解率 → ABC）`;
+      else hint.textContent = `正解率順（正解率${arrow} → 誤 → ABC）`;
+    }
+  }
+
+  // attach once DOM is ready
+  document.addEventListener("click", (e)=>{
+    const btn = e.target?.closest?.(".rankSortBtn");
+    if(!btn) return;
+    const key = btn.getAttribute("data-sort");
+    if(key) setRankWordSort(key);
+  });
+
+
+  function fmtDate(ts){
+    const d = new Date(ts);
+    const Y = d.getFullYear();
+    const M = ("0"+(d.getMonth()+1)).slice(-2);
+    const D = ("0"+d.getDate()).slice(-2);
+    const h = ("0"+d.getHours()).slice(-2);
+    const m = ("0"+d.getMinutes()).slice(-2);
+    return `${Y}/${M}/${D} ${h}:${m}`;
+  }
+
+  function refreshRankUI(){
+    const store = loadRankStore();
+    const src = getRankSource(store);
+
+    const labelText = (rankScope.value === "all") ? "全CSV" : (src.label || "このCSV");
+    rankLabel.textContent = labelText;
+    rankLabel2.textContent = labelText;
+    rankLabel3.textContent = labelText;
+
+    updateRankWordSortUI();
+
+
+    const sessions = (src.sessions || []);
+    const sorted = [...sessions].sort((a,b)=> (b.score|0)-(a.score|0) || (b.ts|0)-(a.ts|0));
+
+    let lastScore = null, currentRank = 0, idx = 0;
+    const rankRows = [];
+    for(const rec of sorted.slice(0, 30)){
+      idx++;
+      if(lastScore === null || (rec.score|0) !== lastScore){
+        currentRank = idx;
+        lastScore = (rec.score|0);
+      }
+      rankRows.push(`
+        <tr>
+          <td class="right mono">${currentRank}</td>
+          <td class="right mono">${rec.score|0}</td>
+          <td class="right mono">${(rec.acc|0)}%</td>
+          <td>${escapeHtml(rec.mode === "typing" ? "タイピング" : "4択")}</td>
+          <td class="mono">${escapeHtml(fmtDate(rec.ts))}</td>
+        </tr>
+      `);
+    }
+    rankSessionTable.innerHTML = rankRows.join("") || `<tr><td colspan="5" class="muted">まだ記録がありません</td></tr>`;
+
+    const words = Object.values(src.word || {});
+    words.sort((a,b)=>{
+      const at = (a.correct|0) + (a.wrong|0);
+      const bt = (b.correct|0) + (b.wrong|0);
+      const aAcc = at ? (a.correct/at) : 1;
+      const bAcc = bt ? (b.correct/bt) : 1;
+
+      const key = rankWordSort.key;
+      const dir = rankWordSort.dir;
+
+      const cmpNum = (x,y)=> (dir==="desc") ? (y-x) : (x-y);
+
+      if(key === "wrong"){
+        const aw = a.wrong|0, bw = b.wrong|0;
+        if(bw !== aw) return cmpNum(aw,bw);
+        if(aAcc !== bAcc) return aAcc - bAcc; // tiebreak: lower acc first
+        return (a.en||"").localeCompare(b.en||"");
+      }
+      if(key === "correct"){
+        const ac = a.correct|0, bc = b.correct|0;
+        if(bc !== ac) return cmpNum(ac,bc);
+        if(aAcc !== bAcc) return aAcc - bAcc;
+        return (a.en||"").localeCompare(b.en||"");
+      }
+      // acc
+      if(aAcc !== bAcc) return cmpNum(aAcc,bAcc);
+      const aw = a.wrong|0, bw = b.wrong|0;
+      if(bw !== aw) return cmpNum(aw,bw); // secondary
+      return (a.en||"").localeCompare(b.en||"");
+    });
+    const wRows = words.slice(0, 40).map(w=>{
+      const total = (w.correct|0)+(w.wrong|0);
+      const accP = total ? Math.round((w.correct/total)*100) : 0;
+      return `
+        <tr>
+          <td class="mono">${escapeHtml(w.en||"")}</td>
+          <td>${escapeHtml(w.ja||"")}</td>
+          <td class="right good mono">${w.correct|0}</td>
+          <td class="right bad mono">${w.wrong|0}</td>
+          <td class="right mono">${accP}%</td>
+        </tr>
+      `;
+    });
+    rankWordTable.innerHTML = wRows.join("") || `<tr><td colspan="5" class="muted">まだ記録がありません</td></tr>`;
+
+    const byDay = {};
+    for(const rec of sessions){
+      const k = todayKey(rec.ts);
+      if(!byDay[k]) byDay[k] = {best: rec.score|0, count:1};
+      else{
+        byDay[k].count += 1;
+        if((rec.score|0) > byDay[k].best) byDay[k].best = rec.score|0;
+      }
+    }
+    const days = Object.entries(byDay).sort((a,b)=> b[0].localeCompare(a[0]));
+    const dRows = days.slice(0, 60).map(([d,info])=>`
+      <tr>
+        <td class="mono">${escapeHtml(d)}</td>
+        <td class="right mono">${info.best|0}</td>
+        <td class="right mono">${info.count|0}</td>
+      </tr>
+    `);
+    rankDailyTable.innerHTML = dRows.join("") || `<tr><td colspan="3" class="muted">まだ記録がありません</td></tr>`;
+  }
+
+  // ----------------------------
+  // CSV parsing
+  // ----------------------------
+  function splitLine(line, delim){
+    // minimal CSV splitter supporting quotes
+    const out = [];
+    let cur = "";
+    let inQ = false;
+    for(let i=0;i<line.length;i++){
+      const ch = line[i];
+      if(ch === '"'){
+        if(inQ && line[i+1] === '"'){ cur += '"'; i++; }
+        else inQ = !inQ;
+      }else if(!inQ && ch === delim){
+        out.push(cur); cur="";
+      }else{
+        cur += ch;
+      }
+    }
+    out.push(cur);
+    return out;
+  }
+
+  function parseCSV(text){
+    const t = text.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+    const lines = t.split("\n").filter(l => l.trim().length>0);
+    if(!lines.length) return {rows:[], header:[]};
+
+    const delim = settings.delimiter;
+    const sep = (delim === "\t") ? "\t" : delim;
+
+    // detect header by checking if first row contains "en" or "ja"
+    const first = splitLine(lines[0], sep).map(s => norm(s).replace(/^"|"$/g,""));
+    const hasHeader = first.some(x => ["en","ja","level","lang","tts"].includes(x.toLowerCase()));
+
+    let header = [];
+    let startIdx = 0;
+    if(hasHeader){
+      header = first.map(x => x.toLowerCase());
+      startIdx = 1;
+    }else{
+      // fallback header: assume en,ja,level,lang...
+      header = ["en","ja","level","lang"];
+      startIdx = 0;
+    }
+
+    const rows = [];
+    for(let i=startIdx;i<lines.length;i++){
+      const cols = splitLine(lines[i], sep).map(s => norm(s).replace(/^"|"$/g,""));
+      if(cols.every(c => c==="")) continue;
+      const obj = {};
+      for(let j=0;j<cols.length;j++){
+        obj[header[j] ?? ("col"+j)] = cols[j];
+      }
+      rows.push(obj);
+    }
+    return {rows, header};
+  }
+
+  function loadVocabFromText(text, nameLabel="読み込みCSV"){
+    const {rows} = parseCSV(text);
+    const list = [];
+    for(const r of rows){
+      const en = norm(r.en ?? r.word ?? r.english ?? r.e ?? r.col0);
+      const ja = norm(r.ja ?? r.jp ?? r.japanese ?? r.meaning ?? r.m ?? r.col1);
+      const lang = norm(r.lang ?? r.language ?? r.l ?? r.col3) || null;
+      const lvRaw = norm(r.level ?? r.lv ?? r.rank ?? r.col2);
+      const level = lvRaw ? safeInt(lvRaw, null) : null;
+
+      if(!en && !ja) continue;
+
+      // allow en-only or ja-only lines
+      list.push({
+        en: en || "(no-en)",
+        ja: ja || "(意味未設定)",
+        level: (level !== null && Number.isFinite(level)) ? level : null,
+        lang
+      });
+    }
+
+    if(!list.length){
+      alert("CSVから単語が読み取れませんでした。ヘッダーが en,ja,level,lang になっているか確認してください。");
+      return;
+    }
+    vocab = list;
+    resetRunStats();
+    baseCsvLabel = nameLabel;
+    hudCsv.textContent = baseCsvLabel;
+    updateDatasetId();
+    hudCount.textContent = vocab.length.toString();
+    closeOverlay(ovLoader);
+    toast(`読み込みOK: ${vocab.length}語`);
+  }
+
+  btnLoadText.addEventListener("click", () => {
+    const t = csvText.value.trim();
+    if(!t){ alert("貼り付け欄が空です"); return; }
+    csvPreview.textContent = t.split(/\r?\n/).slice(0,10).join("\n");
+    loadVocabFromText(t, "貼り付けCSV");
+  });
+
+  btnLoadFile.addEventListener("click", async () => {
+    const f = fileCsv.files?.[0];
+    if(!f){ alert("CSVファイルを選んでください"); return; }
+    const text = await f.text();
+    csvPreview.textContent = text.split(/\r?\n/).slice(0,10).join("\n");
+    loadVocabFromText(text, f.name);
+  });
+
+  // ----------------------------
+  // Speech
+  // ----------------------------
+  let voices = [];
+  function refreshVoices(){
+    voices = speechSynthesis?.getVoices?.() ?? [];
+  }
+  if("speechSynthesis" in window){
+    refreshVoices();
+    // some browsers load voices async
+    window.speechSynthesis.onvoiceschanged = refreshVoices;
+  }
+
+  function hasJapaneseChars(s){
+  // Hiragana / Katakana / Kanji (incl. CJK extensions commonly used)
+  return /[\u3040-\u30FF\u3400-\u9FFF\uF900-\uFAFF]/.test(s);
+}
+function hasLatinLetters(s){
+  return /[A-Za-z]/.test(s);
+}
+function inferLangFromText(text, langHint){
+  const t = norm(text);
+  const hint = (langHint || "").toLowerCase();
+
+  // 1) Text itself wins: if it's Latin letters and NOT Japanese, treat as English.
+  if(t && !hasJapaneseChars(t) && hasLatinLetters(t)) return "en";
+  if(t && hasJapaneseChars(t)) return "ja";
+
+  // 2) Otherwise follow hint (CSV lang)
+  if(hint.startsWith("en")) return "en";
+  if(hint.startsWith("ja")) return "ja";
+  if(hint.startsWith("fr")) return "fr";
+  if(hint.startsWith("de")) return "de";
+  if(hint.startsWith("es")) return "es";
+  if(hint.startsWith("it")) return "it";
+  if(hint.startsWith("ko")) return "ko";
+  if(hint.startsWith("zh")) return "zh";
+
+  // 3) Last resort: prefer English (prevents "Japanese-style" reading by default)
+  return "en";
+}
+
+function pickVoice(langCode){
+  if(!voices.length) return null;
+
+  // If user forced a language in settings, respect it.
+  let want = (settings.voiceLang === "auto") ? (langCode || "en") : settings.voiceLang;
+  want = (want || "en").toLowerCase();
+
+  const map = {
+    en: [/^en(-|_)?/i],
+    ja: [/^ja(-|_)?/i],
+    fr: [/^fr(-|_)?/i],
+    de: [/^de(-|_)?/i],
+    es: [/^es(-|_)?/i],
+    it: [/^it(-|_)?/i],
+    ko: [/^ko(-|_)?/i],
+    zh: [/^zh(-|_)?/i]
+  };
+
+  const pats = map[want] || [];
+  if(pats.length){
+    const v = voices.find(v => pats.some(p => p.test(v.lang)));
+    if(v) return v;
+  }
+
+  // Fallback order matters: prefer English first, then Japanese.
+  const enV = voices.find(v => /^en(-|_)?/i.test(v.lang));
+  if(enV) return enV;
+
+  const jaV = voices.find(v => /^ja(-|_)?/i.test(v.lang));
+  if(jaV) return jaV;
+
+  return voices[0];
+}
+
+function speak(text, langHint){
+  if(!("speechSynthesis" in window)) return;
+  const t = norm(text);
+  if(!t) return;
+
+  // Decide language: text > hint > default(en)
+  const langCode = inferLangFromText(t, langHint);
+
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(t);
+    u.rate = clamp(Number(settings.rate)||1.0, 0.5, 1.5);
+    u.pitch = clamp(Number(settings.pitch)||1.0, 0.5, 1.5);
+
+    // Give the engine a strong language hint (prevents "日本語っぽい英語" in many browsers)
+    u.lang = (langCode === "en") ? "en-US"
+          : (langCode === "ja") ? "ja-JP"
+          : langCode;
+
+    const v = pickVoice(langCode);
+    if(v) u.voice = v;
+
+    speechSynthesis.speak(u);
+  }catch{}
+}
+
+
+function getPromptSide(){
+  // Prevent spoilers: speak the *prompt* side, not the answer.
+  if(mode === "typing") return "ja"; // typing prompt is Japanese
+  const d = settings.choiceDirection || "en2ja";
+  return (d === "ja2en") ? "ja" : "en";
+}
+function getPromptText(it){
+  const side = getPromptSide();
+  return (side === "ja") ? (it.ja || it.en || "") : (it.en || it.ja || "");
+}
+
+  // ----------------------------
+  // Game state
+  // ----------------------------
+  let running = false;
+  let paused = false;
+
+  let hpMax = 5;
+  let hp = 5;
+
+  let score = 0;
+  let combo = 0;
+  let seen = 0;
+  let hit = 0;
+  let kills = 0;
+
+  let mode = "choice"; // choice or typing
+
+  // Effective pacing (changes automatically in typing mode)
+  let effectiveBaseSpeed = 120;   // px/s actually used for enemies
+  let effectiveSpawnMs = 900;     // ms between spawns actually used
+
+  const enemies = []; // active falling objects
+  let spawnTimer = 0;
+  let typeAnswerLiveUntil = 0;
+  const MOBILE_TYPING_PAD_CHARS = "abcdefghijklmnopqrstuvwxyz".split("");
+
+  function isMobileTypingPadEnv(){
+    try{
+      const narrow = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
+      const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+      const ua = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+      return !!(narrow && (coarse || ua));
+    }catch{
+      return false;
+    }
+  }
+
+  function usingMobileTypingPad(){
+    return mode === "typing" && isMobileTypingPadEnv();
+  }
+
+  function syncMobileTypingPad(){
+    const usePad = usingMobileTypingPad();
+    document.body.classList.toggle("mobile-typing-pad", usePad);
+    if(typeInput){
+      typeInput.readOnly = usePad;
+      typeInput.setAttribute("inputmode", usePad ? "none" : "text");
+      typeInput.setAttribute("autocapitalize", "off");
+      typeInput.setAttribute("autocorrect", "off");
+      if(usePad){
+        typeInput.blur();
+      }
+    }
+    if(mobileTypingPad){
+      mobileTypingPad.classList.toggle("show", usePad);
+    }
+  }
+
+  function fillMobileTypingPad(){
+    if(!mobileTypingPadGrid) return;
+    mobileTypingPadGrid.innerHTML = "";
+    for(const ch of MOBILE_TYPING_PAD_CHARS){
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "mobileKeyBtn";
+      btn.textContent = ch;
+      btn.dataset.padChar = ch;
+      mobileTypingPadGrid.appendChild(btn);
+    }
+  }
+
+  function appendMobilePadChar(ch){
+    if(!typeInput) return;
+    typeInput.value = `${typeInput.value || ""}${String(ch || "")}`;
+    updateTypeMirror();
+  }
+
+  function backspaceMobilePad(){
+    if(!typeInput) return;
+    const v = String(typeInput.value || "");
+    typeInput.value = v.slice(0, -1);
+    updateTypeMirror();
+  }
+
+  function clearMobilePad(){
+    if(!typeInput) return;
+    typeInput.value = "";
+    updateTypeMirror();
+  }
+  let gameFreezeUntil = 0;
+
+
+  // Avoid showing the same word repeatedly.
+  // We keep a short history of recently used keys and also avoid duplicates currently on screen.
+  const recentPickKeys = []; // newest first
+  function recentPickLimit(){
+    // keep around ~20% of pool, clamped
+    const n = activeVocab?.length || 0
+    const lim = Math.floor(n * 0.20)
+    return clamp(lim, 8, 20)
+  }
+  function rememberPickKey(k){
+    if(!k) return
+    // move to front (dedupe)
+    const idx = recentPickKeys.indexOf(k)
+    if(idx >= 0) recentPickKeys.splice(idx, 1)
+    recentPickKeys.unshift(k)
+    const lim = recentPickLimit()
+    if(recentPickKeys.length > lim) recentPickKeys.length = lim
+  }
+  let lastTick = now();
+
+  let currentTarget = null; // the enemy the player is answering against
+  let currentChoices = [];  // array of vocab items (or strings)
+  let correctIndex = 0;
+
+  // boss mode
+  let bossActive = false;
+  let bossHpMax = 0;
+  let bossHp = 0;
+  let bossKeyList = []; // keys of wrongPool eligible
+  let bossEnemy = null;
+
+  const LANES = 4; // 4 columns
+  function laneX(lane){
+    const rect = stage.getBoundingClientRect();
+    const w = rect.width;
+    const step = w / LANES;
+    return (lane + 0.5) * step;
+  }
+
+  function makeKey(item){
+    // key should remain stable for stats even if ja missing
+    return normKey(item.en) + "||" + normKey(item.ja);
+  }
+
+  function ensureStat(item){
+    const k = makeKey(item);
+    if(!stats[k]){
+      stats[k] = { en:item.en, ja:item.ja, level:item.level, lang:item.lang, correct:0, wrong:0, last:"-" };
+    }
+    return stats[k];
+  }
+
+  function addWrong(item){
+    const k = makeKey(item);
+    wrongPool[k] = (wrongPool[k] || 0) + 1;
+    hudWrongPool.textContent = Object.keys(wrongPool).length.toString();
+  }
+
+  function decWrong(k){
+    if(!wrongPool[k]) return;
+    wrongPool[k] -= 1;
+    if(wrongPool[k] <= 0) delete wrongPool[k];
+    hudWrongPool.textContent = Object.keys(wrongPool).length.toString();
+  }
+
+  function recomputeEffectivePacing(){
+    // Base values from settings (player-tuned)
+    let bs = settings.baseSpeed;
+    let sp = settings.spawnMs;
+
+    // Typing needs more breathing room: slower fall + bigger gaps
+    if(mode === "typing"){
+      bs = Math.max(40, Math.round(bs * 0.60));     // 40% slower
+      sp = Math.min(3000, Math.round(sp * 2.40));   // 2.4x spacing
+    }
+
+    effectiveBaseSpeed = bs;
+    effectiveSpawnMs = sp;
+
+    // sync the aside speed controls to the *base* speed (what user edits)
+    // (the effective speed is derived automatically for typing)
+  }
+
+  function resetRunStats(){
+    stats = {};
+    wrongPool = {};
+    hudWrongPool.textContent = "0";
+    hudCount.textContent = vocab.length.toString();
+    // leave best score
+  }
+
+  // ----------------------------
+  // Spawning
+  // ----------------------------
+
+  function weightedPickVocab(){
+    if(!activeVocab.length) return null;
+
+    const onScreen = new Set(enemies.filter(e => e && e.alive).map(e => makeKey(e.item)));
+    const recentSet = new Set(recentPickKeys);
+
+    const strict = [];  // avoid recent + avoid on-screen
+    const relaxed = []; // avoid on-screen only
+
+    for(const it of activeVocab){
+      const k = makeKey(it);
+      const wc = wrongPool[k] || 0;
+      const extra = wc * (settings.wrongWeight|0);
+      const w = 1 + Math.max(0, extra);
+
+      for(let i=0;i<w;i++){
+        relaxed.push(it);
+        if(!onScreen.has(k) && !recentSet.has(k)) strict.push(it);
+      }
+    }
+
+    // Prefer strict list to keep spacing between repeats.
+    let base = strict.length ? strict : relaxed.filter(it => !onScreen.has(makeKey(it)));
+    if(!base.length) base = relaxed; // final fallback
+
+    const chosen = pick(base);
+    if(chosen) rememberPickKey(makeKey(chosen));
+    return chosen;
+  }
+
+  function makeEnemy(item, isBoss=false){
+    const div = document.createElement("div");
+    div.className = "enemy" + (isBoss ? " boss" : "");
+    const lv = item.level ? `Lv${item.level}` : "Lv-";
+
+    // Show ONLY the prompt on the falling card (no spoiler translation).
+    // typing: ja prompt, answer is en typed.
+    // 4-choice: direction can be switched.
+    const isTyping = (mode === "typing");
+    const dir = settings.choiceDirection || "en2ja";
+    const promptText = isTyping
+      ? (item.ja || "(意味未設定)")
+      : (dir === "ja2en" ? (item.ja || "(意味未設定)") : (item.en || "(no-en)"));
+
+    const labelTop = promptText;
+
+    // Sub line: never show the translation/answer.
+    let sub = "";
+    if(isTyping){
+      const L = onlyLettersLen(item.en);
+      sub = L ? `文字数: ${L}` : "英単語を入力";
+    }else{
+      sub = "";
+    }
+    div.innerHTML = `
+      <div class="top">
+        <div class="w">${escapeHtml(labelTop)}</div>
+        <div class="lv">${escapeHtml(lv)}${isBoss ? " / BOSS" : ""}</div>
+      </div>
+      <div class="sub">${escapeHtml(sub)}</div>
+    `;
+    stage.appendChild(div);
+
+    const lane = Math.floor(Math.random()*LANES);
+    const rect = stage.getBoundingClientRect();
+
+    // --- Clamp X so the card never gets cut off on narrow screens ---
+    // Because .enemy uses transform: translate(-50%, -50%), x is the CENTER.
+    const cardW = div.getBoundingClientRect().width || 160;
+    const half = cardW / 2;
+    const pad = 8; // inner padding from the stage edge
+
+    let minX = half + pad;
+    let maxX = rect.width - half - pad;
+    if(minX > maxX){
+      minX = maxX = rect.width / 2;
+    }
+
+    const x = clamp(laneX(lane), minX, maxX);
+    const y = -10;
+
+    const speed = isBoss ? Math.max(60, effectiveBaseSpeed * 0.85) : effectiveBaseSpeed + Math.min(160, combo*4);
+    const id = cryptoRandomId();
+
+    return {
+      id,
+      item,
+      isBoss,
+      lane,
+      x,
+      y,
+      speed,
+      el: div,
+      alive: true
+    };
+  }
+
+  function cryptoRandomId(){
+    if(window.crypto?.getRandomValues){
+      const a = new Uint32Array(2);
+      crypto.getRandomValues(a);
+      return a[0].toString(16) + a[1].toString(16);
+    }
+    return Math.random().toString(16).slice(2);
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  }
+
+  function spawnIfNeeded(dt){
+    const maxEnemies = clamp(safeInt(optMaxEnemies.value, 3), 1, 10);
+
+    // boss trigger
+    if(!bossActive && !paused && running && Object.keys(wrongPool).length>0 && kills>0 && (kills % settings.bossEvery === 0)){
+      startBoss();
+      return;
+    }
+
+    if(bossActive) return; // only boss on screen in boss mode
+
+    spawnTimer -= dt;
+    if(spawnTimer <= 0 && enemies.length < maxEnemies){
+      spawnTimer = effectiveSpawnMs;
+      const item = weightedPickVocab();
+      if(!item) return;
+      const e = makeEnemy(item, false);
+      enemies.push(e);
+      // set target if none
+      if(!currentTarget) chooseTarget();
+      applyTargetHighlight();
+    }
+  }
+
+
+  function applyTargetHighlight(){
+    // clear
+    for(const e of enemies){
+      if(e?.el) e.el.classList.toggle('target', currentTarget && e.id === currentTarget.id);
+    }
+    if(bossEnemy?.el) bossEnemy.el.classList.toggle('target', currentTarget && bossEnemy && currentTarget.id === bossEnemy.id);
+  }
+
+  function chooseTarget(){
+    // choose the lowest enemy (closest to bottom) as target
+    if(bossActive){
+      currentTarget = bossEnemy;
+      applyTargetHighlight();
+      renderQuestionFor(currentTarget.item);
+      return;
+    }
+    const alive = enemies.filter(e => e.alive);
+    if(!alive.length){
+      currentTarget = null;
+      applyTargetHighlight();
+      hudTarget.textContent = "-";
+      setChoicesDisabled(true);
+      if(mode === "typing" && typeMirror){ typeMirror.innerHTML = ""; typeInput.classList.remove("ok","ng"); }
+      return;
+    }
+    alive.sort((a,b) => b.y - a.y);
+    currentTarget = alive[0];
+    applyTargetHighlight();
+    renderQuestionFor(currentTarget.item);
+  }
+
+  function renderQuestionFor(item){
+    if(!item) return;
+    if(now() >= typeAnswerLiveUntil) hideTypeAnswerLive();
+
+    const dir = settings.choiceDirection || "en2ja";
+    const isTyping = (mode === "typing");
+
+    // Prompt depends on mode/direction
+    const promptText = isTyping
+      ? (item.ja || "(意味未設定)")
+      : (dir === "ja2en" ? (item.ja || "(意味未設定)") : (item.en || "(no-en)"));
+
+    hudTarget.textContent = promptText;
+
+    btnSpeak.disabled = false;
+    btnSkip.disabled = false;
+
+    if(mode === "choice"){
+      const correct = item;
+
+      // Build distractors from active pool
+      const pool = activeVocab.filter(v => makeKey(v) !== makeKey(correct));
+      const sameLv = correct.level ? pool.filter(v => v.level === correct.level) : [];
+      const source = sameLv.length >= 3 ? sameLv : pool;
+
+      const picks = [];
+      while(picks.length < 3 && source.length){
+        const d = pick(source);
+        const dk = makeKey(d);
+        if(picks.some(x => makeKey(x) === dk)) continue;
+        picks.push(d);
+      }
+      while(picks.length < 3 && pool.length){
+        const d = pick(pool);
+        const dk = makeKey(d);
+        if(picks.some(x => makeKey(x) === dk)) continue;
+        picks.push(d);
+      }
+
+      currentChoices = [correct, ...picks];
+
+      // shuffle
+      for(let i=currentChoices.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [currentChoices[i], currentChoices[j]] = [currentChoices[j], currentChoices[i]];
+      }
+
+      correctIndex = currentChoices.findIndex(v => makeKey(v) === makeKey(correct));
+
+      // Render choice labels based on direction (answers are opposite side)
+      cEls.forEach((el, i) => {
+        const it = currentChoices[i];
+        const ansText = (dir === "ja2en") ? (it.en || "(no-en)") : (it.ja || "(意味未設定)");
+        el.textContent = ansText;
+      });
+
+      resetChoiceStyles();
+      setChoicesDisabled(false);
+    }else{
+      // typing mode: re-enable input/buttons in case they were disabled while waiting for next spawn
+      setChoicesDisabled(false);
+      typeInput.value = "";
+      updateTypeMirror();
+      syncMobileTypingPad();
+      if(!usingMobileTypingPad()) typeInput.focus({preventScroll:true});
+    }
+
+    // optionally speak (no audio for Japanese prompts to avoid spoilers / unnecessary audio)
+    if(settings.autoSpeak && getPromptSide() !== "ja"){
+      const text = getPromptText(item);
+      speak(text, item.lang);
+    }
+  }
+
+
+  // ----------------------------
+  // Boss: after a correct hit, reshuffle the 4 choices so the correct answer isn't always on the same button.
+  // (Only affects 4-choice mode; does not change the target word.)
+  // ----------------------------
+  function reshuffleChoicesForCurrentTarget(){
+    if(mode !== "choice") return;
+    if(!currentTarget || !currentTarget.item) return;
+
+    const item = currentTarget.item;
+    const dir = settings.choiceDirection || "en2ja";
+    const correct = item;
+
+    const pool = activeVocab.filter(v => makeKey(v) !== makeKey(correct));
+    const sameLv = correct.level ? pool.filter(v => v.level === correct.level) : [];
+    const source = sameLv.length >= 3 ? sameLv : pool;
+
+    const picks = [];
+    while(picks.length < 3 && source.length){
+      const d = pick(source);
+      const dk = makeKey(d);
+      if(picks.some(x => makeKey(x) === dk)) continue;
+      picks.push(d);
+    }
+    while(picks.length < 3 && pool.length){
+      const d = pick(pool);
+      const dk = makeKey(d);
+      if(picks.some(x => makeKey(x) === dk)) continue;
+      picks.push(d);
+    }
+
+    // Try a few times to change the correct button position.
+    const prevIdx = correctIndex;
+    let tries = 0;
+    do{
+      currentChoices = [correct, ...picks];
+      for(let i=currentChoices.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [currentChoices[i], currentChoices[j]] = [currentChoices[j], currentChoices[i]];
+      }
+      correctIndex = currentChoices.findIndex(v => makeKey(v) === makeKey(correct));
+      tries++;
+    }while(tries < 6 && correctIndex === prevIdx);
+
+    cEls.forEach((el, i) => {
+      const it = currentChoices[i];
+      const ansText = (dir === "ja2en") ? (it.en || "(no-en)") : (it.ja || "(意味未設定)");
+      el.textContent = ansText;
+    });
+
+    resetChoiceStyles();
+    setChoicesDisabled(false);
+  }
+
+  function resetChoiceStyles(){
+    choiceBtns.forEach(b => b.classList.remove("correct","wrong"));
+  }
+  function setChoicesDisabled(disabled){
+    choiceBtns.forEach(b => b.disabled = disabled);
+    btnSkip.disabled = disabled;
+    btnSpeak.disabled = disabled;
+    btnEnter.disabled = disabled;
+    btnReveal.disabled = disabled;
+    typeInput.disabled = disabled;
+  }
+
+  // ----------------------------
+  // Boss
+  // ----------------------------
+  function startBoss(){
+    bossActive = true;
+    bossKeyList = Object.keys(wrongPool);
+    const firstKey = pick(bossKeyList);
+    const item = activeVocab.find(v => makeKey(v) === firstKey) || activeVocab.find(v => makeKey(v) === bossKeyList[0]) || weightedPickVocab();
+    if(!item){
+      bossActive = false;
+      return;
+    }
+
+    // clear normal enemies
+    enemies.forEach(e => { removeEnemy(e); });
+    enemies.length = 0;
+    currentTarget = null;
+
+    bossHpMax = clamp(settings.bossHp|0, 1, 20);
+    // scale with wrong pool a bit
+    bossHpMax = clamp(bossHpMax + Math.min(6, bossKeyList.length-1), 1, 26);
+    bossHp = bossHpMax;
+
+    bossHud.style.display = "";
+    updateBossHud();
+
+    bossEnemy = makeEnemy(item, true);
+    enemies.push(bossEnemy); // reuse array for movement
+    chooseTarget();
+      applyTargetHighlight();
+
+    toast("ボス出現！復習語を倒せ 📚🐉");
+  }
+
+  function bossNextItem(){
+    bossKeyList = Object.keys(wrongPool);
+    if(!bossKeyList.length){
+      endBoss(true);
+      return null;
+    }
+    const k = pick(bossKeyList);
+    const item = activeVocab.find(v => makeKey(v) === k) || weightedPickVocab();
+    return item;
+  }
+
+  function updateBossHud(){
+    bossTxt.textContent = `${bossHp}/${bossHpMax}`;
+    bossBar.style.width = `${(bossHp / bossHpMax) * 100}%`;
+  }
+
+  function endBoss(victory){
+    bossActive = false;
+    bossEnemy = null;
+    bossHud.style.display = "none";
+    bossHp = 0; bossHpMax = 0;
+    toast(victory ? "ボス撃破！復習語が少し軽くなった✨" : "ボス撤退…また来るぞ");
+    chooseTarget();
+      applyTargetHighlight();
+  }
+
+  // ----------------------------
+  // Answer handling
+  // ----------------------------
+  function onCorrect(item, enemy){
+    const st = ensureStat(item);
+    st.correct += 1;
+    st.last = "正";
+    hit += 1;
+    seen += 1;
+
+
+    // After-correct audio:
+    // Always speak the *English* answer when you get it right (4択/タイピング両対応).
+    // This happens after a correct action, so it doesn't spoil the question.
+    if(settings.autoSpeak){
+      const ansEn = item.en || "";
+      if(ansEn) speak(ansEn, "en");
+    }
+    combo += 1;
+
+    // Score: make it feel more arcade-y ✨
+    // Base points are much higher, combo ramps faster,
+    // and you get a small "danger bonus" when the word is closer to the bottom.
+    const stageRect = stage.getBoundingClientRect();
+    const danger = enemy ? clamp((enemy.y || 0) / Math.max(1, stageRect.height), 0, 1) : 0;
+    const gain = 120 + (combo * 30) + Math.round(danger * 80);
+    score += gain;
+
+    // Milestone bonus (every 10 combo)
+    if(combo > 0 && combo % 10 === 0){
+      score += 500;
+      toast(`COMBO x${combo}! +500`);
+    }
+
+    // if item is in wrong pool, reduce it slightly (learning effect)
+    const k = makeKey(item);
+    if(wrongPool[k]) decWrong(k);
+
+    // boss damage
+    if(bossActive){
+      bossHp -= 1;
+      updateBossHud();
+      if(bossHp <= 0){
+        // reward and end boss
+        score += 1500 + bossHpMax*250;
+        kills += 1; // count boss as a kill for pacing
+        removeEnemy(enemy);
+        enemies.length = 0;
+        endBoss(true);
+        return;
+      }else{
+        let swapped = false;
+
+        // swap boss word sometimes
+        if(bossHp % 2 === 0){
+          const next = bossNextItem();
+          if(next){
+            swapped = true;
+            removeEnemy(enemy);
+            enemies.length = 0;
+            bossEnemy = makeEnemy(next, true);
+            enemies.push(bossEnemy);
+            chooseTarget();
+      applyTargetHighlight();
+          }
+        }
+
+        // If the boss continues with the same word, reshuffle the 4 answers
+        // so the correct choice isn't always on the same button.
+        if(!swapped){
+          reshuffleChoicesForCurrentTarget();
+        }
+
+        // add a little shake feedback
+        enemy.el.classList.add("good");
+        setTimeout(() => enemy.el?.classList.remove("good"), 220);
+        return;
+      }
+    }
+
+    // normal enemy removal
+    kills += 1;
+    enemy.el.classList.add("good");
+    setTimeout(() => removeEnemy(enemy), 120);
+    chooseTarget();
+      applyTargetHighlight();
+  }
+
+  function onWrong(item, enemy, reason="誤"){
+    playMissSound(); // wrong-answer feedback
+
+    const st = ensureStat(item);
+    st.wrong += 1;
+    st.last = reason;
+    seen += 1;
+
+    combo = 0;
+    hp -= 1;
+    hp = Math.max(0, hp);
+    updateHp();
+
+    addWrong(item);
+
+    // feedback
+    if(enemy?.el){
+      enemy.el.classList.add("bad","shake");
+      setTimeout(() => enemy.el?.classList.remove("shake"), 240);
+    }
+
+    if(hp <= 0){
+      gameOver();
+      return;
+    }
+
+    // boss penalty heavier
+    if(bossActive){
+      // don't remove boss; just keep going
+      updateBossHud();
+      toast("痛い！ボスの一撃 💥");
+      return;
+    }
+
+    // normal: keep enemy (so you can retry), but mark it
+    chooseTarget();
+      applyTargetHighlight();
+  }
+
+  function updateHp(){
+    hpTxt.textContent = `${hp}/${hpMax}`;
+    hpBar.style.width = `${(hp/hpMax)*100}%`;
+  }
+
+  function updateHud(){
+    hudScore.textContent = String(score|0);
+    hudCombo.textContent = String(combo|0);
+    const acc = seen ? Math.round((hit/seen)*100) : 0;
+    hudAcc.textContent = `${acc}%`;
+    resScore.textContent = String(score|0);
+    resAcc.textContent = `${acc}%`;
+    resBest.textContent = String(settings.bestScore|0);
+  }
+
+  function resetChoiceFeedbackLater(){
+    setTimeout(() => resetChoiceStyles(), 280);
+  }
+
+  function answerChoice(i){
+    if(!running || paused) return;
+    if(mode !== "choice") return;
+    if(!currentTarget || !currentTarget.alive) { chooseTarget(); return; }
+
+    const correct = (i === correctIndex);
+    const item = currentTarget.item;
+    const btn = choiceBtns[i];
+
+    if(correct){
+      btn.classList.add("correct");
+      resetChoiceFeedbackLater();
+      onCorrect(item, currentTarget);
+    }else{
+      btn.classList.add("wrong");
+      resetChoiceFeedbackLater();
+      onWrong(item, currentTarget);
+    }
+    updateHud();
+  }
+
+  choiceBtns.forEach(btn => {
+    btn.addEventListener("click", () => answerChoice(safeInt(btn.dataset.i, 0)));
+  });
+
+
+  function hideTypeAnswerLive(force=false){
+    if(!typeAnswerLive) return;
+    if(!force && now() < typeAnswerLiveUntil) return;
+    typeAnswerLiveUntil = 0;
+    typeAnswerLive.textContent = "";
+    typeAnswerLive.classList.remove("show","wrong","reveal");
+  }
+
+  function showTypeAnswerLive(msg, kind="wrong", holdMs=0){
+    if(!typeAnswerLive) return;
+    typeAnswerLive.textContent = String(msg ?? "");
+    typeAnswerLive.classList.remove("wrong","reveal");
+    typeAnswerLive.classList.add("show", kind);
+    typeAnswerLiveUntil = (holdMs > 0) ? (now() + holdMs) : 0;
+  }
+
+  function updateTypeMirror(){
+    if(mode !== "typing") return;
+    if(!typeMirror) return;
+
+    if(!currentTarget || !currentTarget.item){
+      typeMirror.innerHTML = "";
+      typeInput.classList.remove("ok","ng");
+      hideTypeAnswerLive();
+      return;
+    }
+
+    const ansRaw = String(currentTarget.item.en ?? "");
+    const ans = ansRaw.replace(/\s+/g,"").trim();
+    const givenRaw = String(typeInput.value ?? "");
+    const given = givenRaw.replace(/\s+/g,"").trim();
+
+    if(!ans){
+      typeMirror.innerHTML = `<span class="tiny muted">答えがありません</span>`;
+      typeInput.classList.remove("ok","ng");
+      hideTypeAnswerLive();
+      return;
+    }
+
+    const aLower = ans.toLowerCase();
+    const gLower = given.toLowerCase();
+
+    let anyWrong = false;
+    let out = `<span class="label">判定:</span>`;
+
+    for(let i=0; i<ans.length; i++){
+      let cls = "tile pending";
+      let display = "&nbsp;"; // do NOT reveal the answer before typing
+
+      if(i < given.length){
+        display = escapeHtml(given[i]);
+        if(gLower[i] === aLower[i]) cls = "tile correct";
+        else { cls = "tile wrong"; anyWrong = true; }
+      }
+
+      out += `<span class="${cls}">${display}</span>`;
+    }
+
+    // extra typed chars beyond answer length
+    if(given.length > ans.length){
+      for(let i=ans.length; i<given.length; i++){
+        anyWrong = true;
+        out += `<span class="tile wrong">${escapeHtml(given[i])}</span>`;
+      }
+    }
+
+    // input border feedback
+    typeInput.classList.toggle("ok", given.length > 0 && !anyWrong && given.length <= ans.length);
+    typeInput.classList.toggle("ng", anyWrong);
+
+    typeMirror.innerHTML = out;
+
+    if(given.length === 0){
+      hideTypeAnswerLive();
+    }else if(anyWrong){
+      // 1文字の入力ミス中は答えを出さない
+      hideTypeAnswerLive();
+    }else{
+      hideTypeAnswerLive();
+    }
+  }
+
+  function resetTypingEntry(){
+    if(!typeInput) return;
+    typeInput.value = "";
+    typeInput.classList.remove("ok","ng");
+    hideTypeAnswerLive(true);
+    updateTypeMirror();
+  }
+
+  function answerTyping(){
+    if(!running || paused) return;
+    if(mode !== "typing") return;
+    if(!currentTarget || !currentTarget.alive) { chooseTarget(); return; }
+
+    const item = currentTarget.item;
+    const given = normKey(typeInput.value);
+    const ans = normKey(item.en);
+
+    if(!given){
+      toast("入力が空です");
+      return;
+    }
+    if(given === ans){
+      hideTypeAnswerLive();
+      onCorrect(item, currentTarget);
+      resetTypingEntry();
+    }else{
+      hideTypeAnswerLive();
+      toast(`違うっぽい…（入力: ${typeInput.value.trim()}）`);
+      onWrong(item, currentTarget);
+    }
+    updateHud();
+  }
+
+  btnEnter.addEventListener("click", answerTyping);
+  typeInput.addEventListener("input", updateTypeMirror);
+  typeInput.addEventListener("pointerdown", (e) => {
+    if(usingMobileTypingPad()){
+      e.preventDefault();
+      typeInput.blur();
+    }
+  });
+  typeInput.addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){ e.preventDefault(); answerTyping(); }
+  });
+
+  if(mobileTypingPad){
+    fillMobileTypingPad();
+    mobileTypingPad.addEventListener("click", (e) => {
+      const btn = e.target && e.target.closest ? e.target.closest("button") : null;
+      if(!btn || !usingMobileTypingPad()) return;
+      const action = btn.dataset.padAction || "";
+      const ch = btn.dataset.padChar || "";
+      if(action === "back") backspaceMobilePad();
+      else if(action === "clear") clearMobilePad();
+      else if(ch) appendMobilePadChar(ch);
+    });
+  }
+
+  window.addEventListener("resize", syncMobileTypingPad);
+  window.addEventListener("orientationchange", syncMobileTypingPad);
+  syncMobileTypingPad();
+
+  btnReveal.addEventListener("click", () => {
+    if(!currentTarget) return;
+    const it = currentTarget.item;
+    showTypeAnswerLive(`👀 正解: ${String(it.en ?? "").trim()}`, "reveal", 3200);
+    toast(`答え: ${it.en}`);
+    // revealing counts as a wrong (soft)
+    onWrong(it, currentTarget, "見");
+    updateHud();
+  });
+
+  btnSkip.addEventListener("click", () => {
+    if(!running || paused) return;
+    if(!currentTarget) return;
+    // soft penalty: reset combo but no HP
+    combo = 0;
+    const st = ensureStat(currentTarget.item);
+    st.last = "S";
+    chooseTarget();
+      applyTargetHighlight();
+    updateHud();
+    toast("スキップ");
+  });
+
+  btnSpeak.addEventListener("click", () => {
+    if(!currentTarget) return;
+    // No audio for Japanese prompts (user preference)
+    if(getPromptSide() === "ja") return;
+    const it = currentTarget.item;
+    const text = getPromptText(it);
+    speak(text, it.lang);
+  });
+
+  // keyboard shortcuts
+  window.addEventListener("keydown", (e) => {
+    if(e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) {
+      // allow typing
+      if(e.key === "Escape") e.target.blur();
+      return;
+    }
+    if(e.key === " "){ e.preventDefault(); togglePause(); return; }
+    if(e.key.toLowerCase() === "r"){ e.preventDefault(); restart(); return; }
+    if(mode === "choice"){
+      if(["1","2","3","4"].includes(e.key)) answerChoice(parseInt(e.key,10)-1);
+    }
+  });
+
+  // ----------------------------
+  // Game loop
+  // ----------------------------
+  function tick(){
+    const t = now();
+    const dt = (t - lastTick);
+    lastTick = t;
+
+    if(running && !paused){
+      if(t < gameFreezeUntil){
+        requestAnimationFrame(tick);
+        return;
+      }
+      spawnIfNeeded(dt);
+
+      const rect = stage.getBoundingClientRect();
+      const h = rect.height;
+
+      // update enemies
+      for(const e of enemies){
+        if(!e.alive) continue;
+        e.y += (e.speed * dt / 1000);
+        // position
+        e.el.style.left = `${e.x}px`;
+        e.el.style.top = `${e.y}px`;
+
+        // bottom reached
+        if(e.y > h - 18){
+
+          playDropMissSound();
+          if(mode !== "typing") flashBottomMiss(bossActive ? "BREAK!" : "MISS!");
+          // remove enemy and penalize
+          e.alive = false;
+          removeEnemy(e);
+          // in boss mode, reaching bottom is heavy
+          if(bossActive){
+            hp -= 2;
+            hp = Math.max(0, hp);
+            updateHp();
+            toast("ボスが突破した！HP -2");
+            if(hp <= 0){ gameOver(); break; }
+            // respawn boss with next item
+            const missedBossAnswer = String(e.item?.en ?? "").trim();
+            const next = bossNextItem();
+            if(next){
+              enemies.length = 0;
+              bossEnemy = makeEnemy(next, true);
+              enemies.push(bossEnemy);
+              chooseTarget();
+      applyTargetHighlight();
+              if(mode === "typing" && missedBossAnswer){
+                typeInput.value = "";
+                typeInput.classList.remove("ok","ng");
+                if(typeMirror) typeMirror.innerHTML = "";
+                hideTypeAnswerLive();
+                flashBottomMissWithAnswer(bossActive ? "BREAK!" : "MISS!", `正解: ${missedBossAnswer}`);
+              }
+            }
+          }else{
+            hp -= 1;
+            hp = Math.max(0, hp);
+            updateHp();
+            addWrong(e.item);
+            const st = ensureStat(e.item);
+            st.wrong += 1;
+            st.last = "落";
+            seen += 1;
+            combo = 0;
+            if(hp <= 0){ gameOver(); break; }
+            const missedAnswer = String(e.item?.en ?? "").trim();
+            chooseTarget();
+      applyTargetHighlight();
+            if(mode === "typing" && missedAnswer){
+              typeInput.value = "";
+              typeInput.classList.remove("ok","ng");
+              if(typeMirror) typeMirror.innerHTML = "";
+              hideTypeAnswerLive();
+              flashBottomMissWithAnswer("MISS!", `正解: ${missedAnswer}`);
+            }
+          }
+          updateHud();
+        }
+      }
+
+      // cleanup array
+      for(let i=enemies.length-1;i>=0;i--){
+        if(!enemies[i].alive) enemies.splice(i,1);
+      }
+
+      // update target if missing
+      if(!bossActive && (!currentTarget || !currentTarget.alive)) chooseTarget();
+      applyTargetHighlight();
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  function removeEnemy(e){
+    e.alive = false;
+    if(e.el && e.el.parentNode) e.el.parentNode.removeChild(e.el);
+  }
+
+  // ----------------------------
+  // Start / pause / restart / over
+  // ----------------------------
+  function start(){
+    if(running) return;
+    running = true;
+    paused = false;
+
+    // ensure audio is available after tapping Start
+    unlockAudio();
+
+
+    hpMax = clamp(safeInt(optHp.value, 5), 1, 20);
+    hp = hpMax;
+
+    score = 0; combo = 0; seen = 0; hit = 0; kills = 0;
+    spawnTimer = 0;
+    currentTarget = null;
+    currentChoices = [];
+    bossActive = false;
+    bossHud.style.display = "none";
+
+    // mode
+    mode = optMode.value;
+    hudMode.textContent = (mode === "typing") ? "タイピング" : "4択";
+    // Apply 4-choice direction (no effect in typing)
+    if(optChoiceDir){
+      settings.choiceDirection = optChoiceDir.value || settings.choiceDirection || "en2ja";
+      saveSettings();
+    }
+
+
+    // Typing mode pacing: slow down + widen gaps automatically
+    recomputeEffectivePacing();
+
+    if(mode === "typing"){
+      // Typing is tough with many enemies; gently cap to 1 unless user insists
+      if(safeInt(optMaxEnemies.value, 3) > 1){
+        optMaxEnemies.value = "1";
+      }
+      toast("タイピング用に間隔を広げ、落下を遅くしました");
+    }
+    choicePanel.style.display = (mode === "typing") ? "none" : "";
+    typingPanel.style.display = (mode === "typing") ? "" : "none";
+    syncMobileTypingPad();
+
+    // Switch vocabulary pool for this mode
+    setActiveVocabForMode();
+
+    // clear stage
+    enemies.forEach(removeEnemy);
+    enemies.length = 0;
+    typeAnswerLiveUntil = 0;
+    gameFreezeUntil = 0;
+    hideTypeAnswerLive(true);
+
+    updateHp();
+    updateHud();
+    setChoicesDisabled(false);
+
+    btnStart.disabled = true;
+    btnPause.disabled = false;
+    btnRestart.disabled = false;
+
+    toast("開始！");
+
+    // Spawn one immediately so typing input is available right away
+    spawnTimer = -1;
+    spawnIfNeeded(0);
+    chooseTarget();
+      applyTargetHighlight();
+  }
+
+  function togglePause(){
+    if(!running) return;
+    paused = !paused;
+    btnPause.textContent = paused ? "再開" : "一時停止";
+    toast(paused ? "停止中" : "再開");
+    if(!paused && mode === "typing") { syncMobileTypingPad(); if(!usingMobileTypingPad()) typeInput.focus({preventScroll:true}); }
+  }
+
+  function restart(){
+    if(!running){
+      start();
+      return;
+    }
+    // reset but keep loaded vocab and settings
+    running = false;
+    paused = false;
+    btnPause.textContent = "一時停止";
+    btnStart.disabled = false;
+    btnPause.disabled = true;
+    btnRestart.disabled = true;
+    setChoicesDisabled(true);
+
+    // clear enemies
+    enemies.forEach(removeEnemy);
+    enemies.length = 0;
+    currentTarget = null;
+    typeAnswerLiveUntil = 0;
+    gameFreezeUntil = 0;
+    hideTypeAnswerLive(true);
+    bossActive = false;
+    bossHud.style.display = "none";
+
+    toast("リスタート準備OK");
+  }
+
+  function gameOver(){
+    running = false;
+    paused = false;
+    btnStart.disabled = false;
+    btnPause.disabled = true;
+    btnRestart.disabled = true;
+    setChoicesDisabled(true);
+
+    // clear enemies
+    enemies.forEach(removeEnemy);
+    enemies.length = 0;
+
+    // best score
+    if(score > (settings.bestScore|0)){
+      settings.bestScore = score|0;
+      saveSettings();
+    }
+
+    updateHud();
+    recordSession();
+    refreshResults();
+    openOverlay(ovResults);
+
+    toast("ゲームオーバー ☠️");
+  }
+
+  btnStart.addEventListener("click", start);
+  btnPause.addEventListener("click", togglePause);
+  btnRestart.addEventListener("click", restart);
+
+  // ----------------------------
+  // Results
+  // ----------------------------
+  function refreshResults(){
+    resScore.textContent = String(score|0);
+    const acc = seen ? Math.round((hit/seen)*100) : 0;
+    resAcc.textContent = `${acc}%`;
+    resBest.textContent = String(settings.bestScore|0);
+
+    // ranking pills (default: this CSV)
+    updateDatasetId();
+    const store = loadRankStore();
+    const ds = store.datasets?.[datasetId];
+    const sessionsCsv = (ds?.sessions || []);
+    const sessionsAll = (store.allSessions || []);
+
+    const rCsv = computeRank(sessionsCsv, score|0);
+    const rAll = computeRank(sessionsAll, score|0);
+
+    const tk = todayKey(Date.now());
+    const todayCsv = sessionsCsv.filter(s => todayKey(s.ts) === tk);
+    const todayAll = sessionsAll.filter(s => todayKey(s.ts) === tk);
+    const rDayCsv = computeRank(todayCsv, score|0);
+    const rDayAll = computeRank(todayAll, score|0);
+
+    // show scope label and ranks; CSV rank is default shown in main results
+    resRank.textContent = `${rCsv}位`;
+    resRankDay.textContent = `${rDayCsv}位`;
+    resRankCsv.textContent = (baseCsvLabel || "このCSV");
+
+    // build table
+    const rows = Object.values(stats);
+    rows.sort((a,b) => (b.wrong - a.wrong) || (b.correct - a.correct) || a.en.localeCompare(b.en));
+    resTable.innerHTML = rows.map(r => {
+      const last = r.last || "-";
+      const lastClass = (last === "正") ? "good" : (last === "誤" || last === "落") ? "bad" : "";
+      return `
+        <tr>
+          <td class="mono">${escapeHtml(r.en)}</td>
+          <td>${escapeHtml(r.ja || "")}</td>
+          <td class="right good mono">${r.correct|0}</td>
+          <td class="right bad mono">${r.wrong|0}</td>
+          <td class="right mono ${lastClass}">${escapeHtml(last)}</td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="5" class="muted">まだ履歴がありません</td></tr>`;
+  }
+
+  btnClearStats.addEventListener("click", () => {
+    stats = {};
+    wrongPool = {};
+    hudWrongPool.textContent = "0";
+    toast("履歴クリア");
+    refreshResults();
+  });
+
+  btnExportWrong.addEventListener("click", () => {
+    const keys = Object.keys(wrongPool);
+    if(!keys.length){ alert("復習語がありません"); return; }
+    const lines = ["en,ja,level,lang,wrongCount"];
+    for(const k of keys){
+      const st = stats[k] || null;
+      const it = st ? st : (() => {
+        const [enKey, jaKey] = k.split("||");
+        return {en: enKey, ja: jaKey, level:"", lang:""};
+      })();
+      const wc = wrongPool[k] || 0;
+      lines.push([
+        csvEscape(it.en), csvEscape(it.ja || ""),
+        csvEscape(it.level ?? ""), csvEscape(it.lang ?? ""), csvEscape(wc)
+      ].join(","));
+    }
+    downloadText(lines.join("\n"), "review_words.csv");
+  });
+
+  function csvEscape(s){
+    const t = String(s ?? "");
+    if(/[,"\n]/.test(t)) return '"' + t.replace(/"/g,'""') + '"';
+    return t;
+  }
+  function downloadText(text, filename){
+    const blob = new Blob([text], {type:"text/csv;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // ----------------------------
+  // Settings apply / persistence
+  // ----------------------------
+  btnApplySettings.addEventListener("click", () => {
+    // apply base speed (live)
+    const newSpeed = clamp(safeInt(setBaseSpeed.value, 120), 40, 360);
+    if(typeof applyBaseSpeed === "function"){ applyBaseSpeed(newSpeed); }
+    else settings.baseSpeed = newSpeed;
+
+    settings.spawnMs = clamp(safeInt(setSpawnMs.value, 900), 300, 3000);
+
+    // recompute effective pacing after settings change
+    recomputeEffectivePacing();
+
+    const del = setDelimiter.value;
+    settings.delimiter = (del === "tab") ? "\t" : del;
+
+    settings.bossEvery = clamp(safeInt(setBossEvery.value, 15), 5, 50);
+    settings.bossHp = clamp(safeInt(setBossHp.value, 6), 1, 20);
+    settings.wrongWeight = clamp(safeInt(setWrongWeight.value, 3), 1, 10);
+
+    settings.autoSpeak = !!setAutoSpeak.checked;
+    settings.speakWhich = setSpeakWhich.value;
+    settings.voiceLang = setVoiceLang.value;
+    settings.rate = clamp(Number(setRate.value)||1.0, 0.5, 1.5);
+    settings.pitch = clamp(Number(setPitch.value)||1.0, 0.5, 1.5);
+
+    saveSettings();
+    closeOverlay(ovSettings);
+    toast("設定を保存しました");
+  });
+
+  btnResetBest.addEventListener("click", () => {
+    if(!confirm("最高スコアをリセットします。よろしいですか？")) return;
+    settings.bestScore = 0;
+    saveSettings();
+    toast("リセットしました");
+  });
+
+  // quick speed control (aside) - live apply even during play
+  let lastBaseSpeed = settings.baseSpeed;
+
+  function applyBaseSpeed(newSpeed){
+    const ns = clamp(safeInt(newSpeed, settings.baseSpeed), 40, 360);
+    if(ns === settings.baseSpeed) return;
+
+    // ratio is applied to existing enemies using the *effective* speed,
+    // so changes are felt immediately even in typing mode.
+    const prevEffective = effectiveBaseSpeed || (settings.baseSpeed || 1);
+
+    settings.baseSpeed = ns;
+    recomputeEffectivePacing();
+    const nextEffective = effectiveBaseSpeed || prevEffective;
+
+    const ratio = nextEffective / (prevEffective || 1);
+
+    // sync UI (base speed)
+    optSpeedRange.value = String(ns);
+    optSpeedNum.value = String(ns);
+    setBaseSpeed.value = String(ns);
+
+    // adjust existing enemies immediately
+    for(const e of enemies){
+      if(!e || !e.alive) continue;
+      e.speed = Math.max(40, e.speed * ratio);
+    }
+
+    lastBaseSpeed = ns;
+    saveSettings();
+
+    if(mode === "typing"){
+      toast(`スピード(ベース): ${ns} → 実効: ${effectiveBaseSpeed} px/秒`);
+    }else{
+      toast(`スピード: ${ns} px/秒`);
+    }
+  }
+
+  function syncSpeedUIFromSettings(){
+    optSpeedRange.value = String(settings.baseSpeed);
+    optSpeedNum.value = String(settings.baseSpeed);
+  }
+
+  optSpeedRange.addEventListener("input", () => applyBaseSpeed(optSpeedRange.value));
+  optSpeedNum.addEventListener("change", () => applyBaseSpeed(optSpeedNum.value));
+
+  // quick mode sync (aside)
+  optMode.addEventListener("change", () => {
+    // if game is running, reflect next restart
+    hudMode.textContent = (optMode.value === "typing") ? "タイピング" : "4択";
+    // reflect derived pacing preview
+    mode = optMode.value;
+    recomputeEffectivePacing();
+    if(mode === "typing"){ toast(`タイピング: 実効スピード ${effectiveBaseSpeed}px/秒 / 間隔 ${effectiveSpawnMs}ms`); }
+    toast("モード変更は次の開始/リスタートで反映");
+  });
+
+  // 4-choice direction (aside)
+  optChoiceDir.addEventListener("change", () => {
+    settings.choiceDirection = optChoiceDir.value || "en2ja";
+    saveSettings();
+    toast(settings.choiceDirection === "ja2en" ? "4択: 日本語→英語" : "4択: 英語→日本語");
+    if(running && mode === "choice" && currentTarget?.item){
+      renderQuestionFor(currentTarget.item);
+    }
+  });
+
+
+  // ----------------------------
+  // Toast
+  // ----------------------------
+  let toastTimer = null;
+  const toastEl = document.createElement("div");
+  toastEl.style.cssText = `
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    background: rgba(18,26,51,.95);
+    border: 1px solid rgba(255,255,255,.14);
+    color: var(--ink);
+    padding: 10px 12px;
+    border-radius: 999px;
+    box-shadow: 0 14px 30px rgba(0,0,0,.45);
+    z-index: 99;
+    font-size: 12px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .12s ease, transform .12s ease;
+  `;
+  document.body.appendChild(toastEl);
+
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.style.opacity = "1";
+    toastEl.style.transform = "translateX(-50%) translateY(-2px)";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastEl.style.opacity = "0";
+      toastEl.style.transform = "translateX(-50%) translateY(0)";
+    }, 1100);
+  }
+
+  // ----------------------------
+  // Init
+  // ----------------------------
+  function init(){
+    // initial hud
+    baseCsvLabel = "内蔵サンプル";
+    hudCsv.textContent = baseCsvLabel;
+    hudCount.textContent = vocab.length.toString();
+    hudWrongPool.textContent = "0";
+    hudBest.textContent = (settings.bestScore|0).toString();
+    setChoicesDisabled(true);
+    syncSettingsUI();
+  showRankTab("session");
+    // ensure quick speed UI reflects current settings
+    if(typeof syncSpeedUIFromSettings === "function"){ syncSpeedUIFromSettings(); }
+
+    // initial pacing
+    recomputeEffectivePacing();
+
+    // initial pool
+    setActiveVocabForMode();
+
+    setActiveVocabForMode();
+    updateHp();
+    updateHud();
+    requestAnimationFrame(tick);
+  }
+  init();
+
+})();
+});
+</script>
+
+<div id="ovRank" class="overlay">
+  <div class="panel">
+    <div class="hd">
+      <strong>ランキング</strong>
+      <button class="btn small" data-close="ovRank">閉じる</button>
+    </div>
+    <div class="bd">
+      <div class="row" style="justify-content:space-between">
+        <div class="row" style="gap:8px; flex-wrap:wrap">
+          <button class="btn small" id="tabRankSession">自己ランキング</button>
+          <button class="btn small" id="tabRankWords">苦手単語</button>
+          <button class="btn small" id="tabRankDaily">日別</button>
+        </div>
+        <div class="row" style="gap:8px; flex-wrap:wrap">
+          <span class="tiny muted">表示:</span>
+          <select id="rankScope" class="input" style="max-width:160px">
+            <option value="csv">このCSV</option>
+            <option value="all">全CSV</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="rankViewSession">
+        <div class="row" style="justify-content:space-between; margin-bottom:8px">
+          <div class="tiny muted">過去のスコア履歴から「今回は何位」を出します（同点は同順位）。</div>
+          <div class="tiny muted"><span id="rankLabel"></span></div>
+        </div>
+        <div style="overflow:auto; border:1px solid var(--line); border-radius:16px">
+          <table>
+            <thead>
+              <tr>
+                <th class="right">位</th>
+                <th class="right">スコア</th>
+                <th class="right">命中</th>
+                <th>モード</th>
+                <th>日時</th>
+              </tr>
+            </thead>
+            <tbody id="rankSessionTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="rankViewWords" style="display:none">
+        <div class="row" style="justify-content:space-between; margin-bottom:8px">
+          <div class="tiny muted"><span id="rankWordSortHint">間違いが多い順（誤▼ → 正解率▲ → ABC）。</span></div>
+          <div class="tiny muted"><span id="rankLabel2"></span></div>
+        </div>
+        <div style="overflow:auto; border:1px solid var(--line); border-radius:16px">
+          <table>
+            <thead>
+              <tr>
+                <th>単語</th>
+                <th>意味</th>
+                <th class="right"><button class="thbtn rankSortBtn" data-sort="correct" type="button">正<span class="arrow" id="sortArrowCorrect"></span></button></th>
+                <th class="right"><button class="thbtn rankSortBtn" data-sort="wrong" type="button">誤<span class="arrow" id="sortArrowWrong"></span></button></th>
+                <th class="right"><button class="thbtn rankSortBtn" data-sort="acc" type="button">正解率<span class="arrow" id="sortArrowAcc"></span></button></th>
+              </tr>
+            </thead>
+            <tbody id="rankWordTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="rankViewDaily" style="display:none">
+        <div class="row" style="justify-content:space-between; margin-bottom:8px">
+          <div class="tiny muted">日ごとのベストスコア。</div>
+          <div class="tiny muted"><span id="rankLabel3"></span></div>
+        </div>
+        <div style="overflow:auto; border:1px solid var(--line); border-radius:16px">
+          <table>
+            <thead>
+              <tr>
+                <th>日付</th>
+                <th class="right">ベスト</th>
+                <th class="right">回数</th>
+              </tr>
+            </thead>
+            <tbody id="rankDailyTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tiny muted" style="margin-top:10px">
+        ※ 別のCSVを読み込むと、「このCSV」のランキングは別枠になります（混ざりません）。ただし「全CSV」を選ぶと合算して見られます。
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
