@@ -213,7 +213,7 @@
     min-height: 54px;
   }
   .choice:active{transform: translateY(1px)}
-  .choice b{font-size:14px}
+  .choice b{font-size:clamp(16px, 2.4vw, 22px); line-height:1.08; font-weight:800; display:block; word-break:break-word; overflow-wrap:anywhere;}
   .choice small{color:var(--muted); font-size:11px}
   .choice.correct{border-color: rgba(56,217,150,.55); background: rgba(56,217,150,.14)}
   .choice.wrong{border-color: rgba(255,92,122,.55); background: rgba(255,92,122,.14)}
@@ -408,7 +408,7 @@
     /* Put 4 choices in 2 columns to save vertical space */
     .answers{ grid-template-columns: 1fr 1fr !important; gap: 8px; }
     .choice{ padding: 10px 10px; min-height: 46px; border-radius: 14px; }
-    .choice b{ font-size: 13px; }
+    .choice b{ font-size: clamp(16px, 4.8vw, 24px); line-height:1.06; }
     .choice small{ font-size: 10px; }
     /* Compact the pills and small buttons row */
     .pill{ padding: 8px 10px; }
@@ -674,8 +674,13 @@
       gap:8px;
     }
     body.mobile-choice-focus #choicePanel .choice{
-      min-height:58px;
+      min-height:64px;
       padding:14px 12px;
+    }
+    body.mobile-choice-focus #choicePanel .choice b{
+      font-size: clamp(18px, 5.6vw, 30px);
+      line-height:1.02;
+      letter-spacing:-0.02em;
     }
     body.mobile-choice-focus #choicePanel > .hint{
       display:none;
@@ -692,14 +697,14 @@
 </style>
 </head>
 <body>
-<div class="versionBadgeFixed">いま開いている版: v45</div>
+<div class="versionBadgeFixed">いま開いている版: v47</div>
 <button id="btnMobileFocusExit" class="mobileFocusExit" type="button">通常画面へ</button>
 <header>
   <div class="row" style="justify-content:space-between">
     <div class="title">
       <h1>単語塾アーケード（落下ワード）</h1>
       <span class="tag">CSV対応 / コンボ / ボス復習</span>
-      <span class="versionMini">いまの版: v45</span>
+      <span class="versionMini">いまの版: v47</span>
     </div>
     <div class="row">
       <button id="btnHelp" class="btn small ghost">使い方</button>
@@ -839,8 +844,8 @@
         <div class="row" style="margin-top:8px; gap:10px; flex-wrap:wrap">
           <label class="pill"><strong>スピード</strong>
             <span class="mono">
-              <input id="optSpeedRange" type="range" min="40" max="360" value="120" style="width:180px; vertical-align:middle">
-              <input id="optSpeedNum" type="number" min="40" max="360" value="120" style="width:84px; margin-left:8px"> <span class="tiny muted">px/秒</span>
+              <input id="optSpeedRange" type="range" min="20" max="360" value="120" style="width:180px; vertical-align:middle">
+              <input id="optSpeedNum" type="number" min="20" max="360" value="120" style="width:84px; margin-left:8px"> <span class="tiny muted">px/秒</span>
             </span>
           </label>
         </div>
@@ -964,7 +969,7 @@
               <div class="row" style="gap:10px; flex-wrap:wrap">
                 <label class="pill"><strong>落下速度</strong>
                   <span>
-                    <input id="setBaseSpeed" type="number" min="40" max="360" value="120" style="width:90px"> <span class="tiny muted">px/秒</span>
+                    <input id="setBaseSpeed" type="number" min="20" max="360" value="120" style="width:90px"> <span class="tiny muted">px/秒</span>
                   </span>
                 </label>
                 <label class="pill"><strong>出現間隔</strong>
@@ -2377,8 +2382,8 @@ function getPromptText(it){
 
     // Typing needs more breathing room: slower fall + bigger gaps
     if(mode === "typing"){
-      bs = Math.max(40, Math.round(bs * 0.60));     // 40% slower
-      sp = Math.min(3000, Math.round(sp * 2.40));   // 2.4x spacing
+      bs = Math.max(20, Math.round(bs * 0.45));     // much slower for typing
+      sp = Math.min(4000, Math.round(sp * 3.00));   // wider gaps for typing
     }
 
     effectiveBaseSpeed = bs;
@@ -2622,6 +2627,7 @@ function getPromptText(it){
         const it = currentChoices[i];
         const ansText = (dir === "ja2en") ? (it.en || "(no-en)") : (it.ja || "(意味未設定)");
         el.textContent = ansText;
+        fitChoiceButtonText(el, ansText);
       });
 
       resetChoiceStyles();
@@ -2694,6 +2700,25 @@ function getPromptText(it){
 
     resetChoiceStyles();
     setChoicesDisabled(false);
+  }
+
+  function fitChoiceButtonText(el, text){
+    if(!el) return;
+    const len = (text || "").trim().length;
+    let size = "clamp(16px, 2.4vw, 22px)";
+    if(window.innerWidth <= 520){
+      if(len <= 6) size = "clamp(22px, 6.2vw, 32px)";
+      else if(len <= 8) size = "clamp(20px, 5.6vw, 29px)";
+      else if(len <= 10) size = "clamp(18px, 5.0vw, 26px)";
+      else if(len <= 13) size = "clamp(16px, 4.4vw, 22px)";
+      else size = "clamp(14px, 3.9vw, 19px)";
+    }else{
+      if(len <= 6) size = "24px";
+      else if(len <= 9) size = "21px";
+      else if(len <= 12) size = "18px";
+      else size = "16px";
+    }
+    el.style.fontSize = size;
   }
 
   function resetChoiceStyles(){
@@ -3544,7 +3569,7 @@ function getPromptText(it){
   let lastBaseSpeed = settings.baseSpeed;
 
   function applyBaseSpeed(newSpeed){
-    const ns = clamp(safeInt(newSpeed, settings.baseSpeed), 40, 360);
+    const ns = clamp(safeInt(newSpeed, settings.baseSpeed), 20, 360);
     if(ns === settings.baseSpeed) return;
 
     // ratio is applied to existing enemies using the *effective* speed,
@@ -3565,7 +3590,7 @@ function getPromptText(it){
     // adjust existing enemies immediately
     for(const e of enemies){
       if(!e || !e.alive) continue;
-      e.speed = Math.max(40, e.speed * ratio);
+      e.speed = Math.max(mode === "typing" ? 20 : 40, e.speed * ratio);
     }
 
     lastBaseSpeed = ns;
