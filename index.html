@@ -692,14 +692,14 @@
 </style>
 </head>
 <body>
-<div class="versionBadgeFixed">いま開いている版: v44</div>
+<div class="versionBadgeFixed">いま開いている版: v45</div>
 <button id="btnMobileFocusExit" class="mobileFocusExit" type="button">通常画面へ</button>
 <header>
   <div class="row" style="justify-content:space-between">
     <div class="title">
       <h1>単語塾アーケード（落下ワード）</h1>
       <span class="tag">CSV対応 / コンボ / ボス復習</span>
-      <span class="versionMini">いまの版: v44</span>
+      <span class="versionMini">いまの版: v45</span>
     </div>
     <div class="row">
       <button id="btnHelp" class="btn small ghost">使い方</button>
@@ -3393,6 +3393,7 @@ function getPromptText(it){
   if(btnStartChoiceMobile) btnStartChoiceMobile.addEventListener("click", start);
   function exitMobileTypingFocus(){
     mobileTypingFocusDismissed = true;
+    mobileChoiceFocusDismissed = true;
     syncMobileTypingPad();
     toast("通常画面に戻りました");
   }
@@ -3400,6 +3401,7 @@ function getPromptText(it){
   if(btnMobileFocusExitInline) btnMobileFocusExitInline.addEventListener("click", exitMobileTypingFocus);
   function exitMobileChoiceFocus(){
     mobileChoiceFocusDismissed = true;
+    mobileTypingFocusDismissed = true;
     syncMobileTypingPad();
     toast("通常画面に戻りました");
   }
@@ -3590,7 +3592,19 @@ function getPromptText(it){
     hudMode.textContent = (optMode.value === "typing") ? "タイピング" : "4択";
     // reflect derived pacing preview
     mode = optMode.value;
-    if(mode !== "typing") mobileTypingFocusDismissed = false;
+
+    // Mobile safety rail:
+    // while a run is already active, changing the mode should NOT throw the screen
+    // back into another compact/focus layout immediately.
+    // Keep the normal screen until the player restarts/starts again.
+    if(running){
+      mobileTypingFocusDismissed = true;
+      mobileChoiceFocusDismissed = true;
+    }else{
+      mobileTypingFocusDismissed = false;
+      mobileChoiceFocusDismissed = false;
+    }
+
     recomputeEffectivePacing();
     syncMobileTypingPad();
     if(mode === "typing"){ toast(`タイピング: 実効スピード ${effectiveBaseSpeed}px/秒 / 間隔 ${effectiveSpawnMs}ms`); }
