@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>単語塾アーケード（落下ワード）</title>
+<title>単語塾アーケード（落下ワード） v36</title>
 <style>
   :root{
     --bg:#0b1020; --card:#121a33; --ink:#e8eeff; --muted:#a9b3d6;
@@ -470,14 +470,21 @@
     to{opacity:0; transform:translate(-50%,-28px)}
   }
 
+
+  .versionBadgeFixed{position:fixed; right:10px; bottom:10px; z-index:9999; padding:8px 12px; border-radius:999px; background:rgba(25,34,70,.92); color:#dfe7ff; border:1px solid rgba(130,170,255,.45); box-shadow:0 10px 24px rgba(0,0,0,.35); font:700 12px/1.2 system-ui,sans-serif; letter-spacing:.04em; pointer-events:none}
+  .versionMini{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(25,34,70,.72); color:#dfe7ff; border:1px solid rgba(130,170,255,.35); font-size:12px; font-weight:800}
+  @media (max-width:520px){ .versionBadgeFixed{right:8px; bottom:8px; font-size:11px; padding:7px 10px} .versionMini{font-size:11px; padding:5px 8px} }
+
 </style>
 </head>
 <body>
+<div class="versionBadgeFixed">いま開いている版: v36</div>
 <header>
   <div class="row" style="justify-content:space-between">
     <div class="title">
       <h1>単語塾アーケード（落下ワード）</h1>
       <span class="tag">CSV対応 / コンボ / ボス復習</span>
+      <span class="versionMini">いまの版: v36</span>
     </div>
     <div class="row">
       <button id="btnHelp" class="btn small ghost">使い方</button>
