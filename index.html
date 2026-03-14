@@ -268,9 +268,9 @@
   .mobileTypingPad{display:none; margin-top:10px}
   .mobileTypingPad.show{display:block}
   .mobileTypingPad .padHint{font-size:12px; color:var(--muted); margin:0 0 8px}
-  .mobileTypingPadGrid{
+  .mobilePadLetterGrid{
     display:grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap:8px;
   }
   .mobileTypingPadActions{
@@ -478,13 +478,13 @@
 </style>
 </head>
 <body>
-<div class="versionBadgeFixed">いま開いている版: v37</div>
+<div class="versionBadgeFixed">いま開いている版: v38</div>
 <header>
   <div class="row" style="justify-content:space-between">
     <div class="title">
       <h1>単語塾アーケード（落下ワード）</h1>
       <span class="tag">CSV対応 / コンボ / ボス復習</span>
-      <span class="versionMini">いまの版: v37</span>
+      <span class="versionMini">いまの版: v38</span>
     </div>
     <div class="row">
       <button id="btnHelp" class="btn small ghost">使い方</button>
@@ -565,9 +565,8 @@
           </div>
           <div id="typeMirror" class="typeMirror mono" aria-live="polite"></div>
           <div id="typeAnswerLive" class="typeAnswerLive" aria-live="assertive"></div>
-          <div id="mobileTypingPad" class="mobileTypingPad" aria-label="スマホ用英字パッド">
-            <p class="padHint">スマホでは5グループの英字パッドで入力します。上でグループを選んで、下で文字を押します。パソコンは今まで通りキーボード入力です。</p>
-            <div id="mobilePadGroupGrid" class="mobilePadGroupGrid"></div>
+          <div id="mobileTypingPad" class="mobileTypingPad" aria-label="スマホ用候補文字パッド">
+            <p class="padHint">スマホでは、答えに必要な文字をまぜた候補から選んで入力します。パソコンは今まで通りキーボード入力です。</p>
             <div id="mobilePadLetterGrid" class="mobilePadLetterGrid"></div>
             <div class="mobileTypingPadActions">
               <button type="button" class="mobileKeyBtn action" data-pad-action="back">⌫ 1文字消す</button>
@@ -1173,8 +1172,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const btnReveal = $("#btnReveal");
   const typeAnswerLive = $("#typeAnswerLive");
   const mobileTypingPad = $("#mobileTypingPad");
-  const mobilePadGroupGrid = $("#mobilePadGroupGrid");
-  const mobilePadLetterGrid = $("#mobilePadLetterGrid");
+    const mobilePadLetterGrid = $("#mobilePadLetterGrid");
 
   const cEls = [$("#c0"), $("#c1"), $("#c2"), $("#c3")];
   const choiceBtns = $$(".choice");
@@ -1976,13 +1974,9 @@ function getPromptText(it){
   const enemies = []; // active falling objects
   let spawnTimer = 0;
   let typeAnswerLiveUntil = 0;
-  const MOBILE_PAD_GROUPS = [
-    { key:"ae", label:"A-E", chars:["a","b","c","d","e"] },
-    { key:"fj", label:"F-J", chars:["f","g","h","i","j"] },
-    { key:"ko", label:"K-O", chars:["k","l","m","n","o"] },
-    { key:"pt", label:"P-T", chars:["p","q","r","s","t"] },
-    { key:"uz", label:"U-Z", chars:["u","v","w","x","y","z"] },
-  ];
+  const MOBILE_PAD_ALPHABET = "abcdefghijklmnopqrstuvwxyz".split("");
+  const MOBILE_PAD_TARGET_COUNT = 10;
+  let mobilePadLetters = [];
 
   function isMobileTypingPadEnv(){
     try{
@@ -2017,13 +2011,27 @@ function getPromptText(it){
     }
   }
 
-  let activeMobilePadGroupKey = MOBILE_PAD_GROUPS[0].key;
+  function buildMobilePadLettersForItem(item){
+    const answer = String(item?.en || "").toLowerCase().replace(/[^a-z]/g, "");
+    const uniqueAnswerLetters = [...new Set(answer.split(""))].filter(Boolean);
+    const decoys = MOBILE_PAD_ALPHABET.filter(ch => !uniqueAnswerLetters.includes(ch));
+    for(let i = decoys.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [decoys[i], decoys[j]] = [decoys[j], decoys[i]];
+    }
+    const totalCount = Math.max(MOBILE_PAD_TARGET_COUNT, uniqueAnswerLetters.length);
+    const letters = [...uniqueAnswerLetters, ...decoys.slice(0, Math.max(0, totalCount - uniqueAnswerLetters.length))];
+    for(let i = letters.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [letters[i], letters[j]] = [letters[j], letters[i]];
+    }
+    mobilePadLetters = letters;
+  }
 
   function renderMobilePadLetters(){
     if(!mobilePadLetterGrid) return;
     mobilePadLetterGrid.innerHTML = "";
-    const group = MOBILE_PAD_GROUPS.find(g => g.key === activeMobilePadGroupKey) || MOBILE_PAD_GROUPS[0];
-    for(const ch of group.chars){
+    for(const ch of mobilePadLetters){
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "mobileKeyBtn letter";
@@ -2031,25 +2039,10 @@ function getPromptText(it){
       btn.dataset.padChar = ch;
       mobilePadLetterGrid.appendChild(btn);
     }
-    if(group.chars.length < 5){
-      for(let i=group.chars.length; i<5; i++){
-        const spacer = document.createElement("div");
-        mobilePadLetterGrid.appendChild(spacer);
-      }
-    }
   }
 
-  function fillMobileTypingPad(){
-    if(!mobilePadGroupGrid) return;
-    mobilePadGroupGrid.innerHTML = "";
-    for(const group of MOBILE_PAD_GROUPS){
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "mobileKeyBtn group" + (group.key === activeMobilePadGroupKey ? " active" : "");
-      btn.textContent = group.label;
-      btn.dataset.padGroup = group.key;
-      mobilePadGroupGrid.appendChild(btn);
-    }
+  function fillMobileTypingPad(item){
+    buildMobilePadLettersForItem(item || currentTarget?.item || null);
     renderMobilePadLetters();
   }
 
@@ -2327,12 +2320,14 @@ function getPromptText(it){
       hudTarget.textContent = "-";
       setChoicesDisabled(true);
       if(mode === "typing" && typeMirror){ typeMirror.innerHTML = ""; typeInput.classList.remove("ok","ng"); }
+      fillMobileTypingPad(null);
       return;
     }
     alive.sort((a,b) => b.y - a.y);
     currentTarget = alive[0];
     applyTargetHighlight();
     renderQuestionFor(currentTarget.item);
+    fillMobileTypingPad(currentTarget.item);
   }
 
   function renderQuestionFor(item){
@@ -2856,13 +2851,8 @@ function getPromptText(it){
       if(!btn || !usingMobileTypingPad()) return;
       const action = btn.dataset.padAction || "";
       const ch = btn.dataset.padChar || "";
-      const groupKey = btn.dataset.padGroup || "";
       if(action === "back") backspaceMobilePad();
       else if(action === "clear") clearMobilePad();
-      else if(groupKey){
-        activeMobilePadGroupKey = groupKey;
-        fillMobileTypingPad();
-      }
       else if(ch) appendMobilePadChar(ch);
     });
   }
