@@ -478,13 +478,13 @@
 </style>
 </head>
 <body>
-<div class="versionBadgeFixed">いま開いている版: v36</div>
+<div class="versionBadgeFixed">いま開いている版: v37</div>
 <header>
   <div class="row" style="justify-content:space-between">
     <div class="title">
       <h1>単語塾アーケード（落下ワード）</h1>
       <span class="tag">CSV対応 / コンボ / ボス復習</span>
-      <span class="versionMini">いまの版: v36</span>
+      <span class="versionMini">いまの版: v37</span>
     </div>
     <div class="row">
       <button id="btnHelp" class="btn small ghost">使い方</button>
@@ -566,8 +566,9 @@
           <div id="typeMirror" class="typeMirror mono" aria-live="polite"></div>
           <div id="typeAnswerLive" class="typeAnswerLive" aria-live="assertive"></div>
           <div id="mobileTypingPad" class="mobileTypingPad" aria-label="スマホ用英字パッド">
-            <p class="padHint">スマホでは下の英字パッドで入力します。パソコンは今まで通りキーボード入力です。</p>
-            <div id="mobileTypingPadGrid" class="mobileTypingPadGrid"></div>
+            <p class="padHint">スマホでは5グループの英字パッドで入力します。上でグループを選んで、下で文字を押します。パソコンは今まで通りキーボード入力です。</p>
+            <div id="mobilePadGroupGrid" class="mobilePadGroupGrid"></div>
+            <div id="mobilePadLetterGrid" class="mobilePadLetterGrid"></div>
             <div class="mobileTypingPadActions">
               <button type="button" class="mobileKeyBtn action" data-pad-action="back">⌫ 1文字消す</button>
               <button type="button" class="mobileKeyBtn action" data-pad-action="clear">クリア</button>
@@ -1172,7 +1173,8 @@ window.addEventListener('DOMContentLoaded', () => {
   const btnReveal = $("#btnReveal");
   const typeAnswerLive = $("#typeAnswerLive");
   const mobileTypingPad = $("#mobileTypingPad");
-  const mobileTypingPadGrid = $("#mobileTypingPadGrid");
+  const mobilePadGroupGrid = $("#mobilePadGroupGrid");
+  const mobilePadLetterGrid = $("#mobilePadLetterGrid");
 
   const cEls = [$("#c0"), $("#c1"), $("#c2"), $("#c3")];
   const choiceBtns = $$(".choice");
@@ -1974,7 +1976,13 @@ function getPromptText(it){
   const enemies = []; // active falling objects
   let spawnTimer = 0;
   let typeAnswerLiveUntil = 0;
-  const MOBILE_TYPING_PAD_CHARS = "abcdefghijklmnopqrstuvwxyz".split("");
+  const MOBILE_PAD_GROUPS = [
+    { key:"ae", label:"A-E", chars:["a","b","c","d","e"] },
+    { key:"fj", label:"F-J", chars:["f","g","h","i","j"] },
+    { key:"ko", label:"K-O", chars:["k","l","m","n","o"] },
+    { key:"pt", label:"P-T", chars:["p","q","r","s","t"] },
+    { key:"uz", label:"U-Z", chars:["u","v","w","x","y","z"] },
+  ];
 
   function isMobileTypingPadEnv(){
     try{
@@ -2009,17 +2017,40 @@ function getPromptText(it){
     }
   }
 
-  function fillMobileTypingPad(){
-    if(!mobileTypingPadGrid) return;
-    mobileTypingPadGrid.innerHTML = "";
-    for(const ch of MOBILE_TYPING_PAD_CHARS){
+  let activeMobilePadGroupKey = MOBILE_PAD_GROUPS[0].key;
+
+  function renderMobilePadLetters(){
+    if(!mobilePadLetterGrid) return;
+    mobilePadLetterGrid.innerHTML = "";
+    const group = MOBILE_PAD_GROUPS.find(g => g.key === activeMobilePadGroupKey) || MOBILE_PAD_GROUPS[0];
+    for(const ch of group.chars){
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "mobileKeyBtn";
+      btn.className = "mobileKeyBtn letter";
       btn.textContent = ch;
       btn.dataset.padChar = ch;
-      mobileTypingPadGrid.appendChild(btn);
+      mobilePadLetterGrid.appendChild(btn);
     }
+    if(group.chars.length < 5){
+      for(let i=group.chars.length; i<5; i++){
+        const spacer = document.createElement("div");
+        mobilePadLetterGrid.appendChild(spacer);
+      }
+    }
+  }
+
+  function fillMobileTypingPad(){
+    if(!mobilePadGroupGrid) return;
+    mobilePadGroupGrid.innerHTML = "";
+    for(const group of MOBILE_PAD_GROUPS){
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "mobileKeyBtn group" + (group.key === activeMobilePadGroupKey ? " active" : "");
+      btn.textContent = group.label;
+      btn.dataset.padGroup = group.key;
+      mobilePadGroupGrid.appendChild(btn);
+    }
+    renderMobilePadLetters();
   }
 
   function appendMobilePadChar(ch){
@@ -2825,8 +2856,13 @@ function getPromptText(it){
       if(!btn || !usingMobileTypingPad()) return;
       const action = btn.dataset.padAction || "";
       const ch = btn.dataset.padChar || "";
+      const groupKey = btn.dataset.padGroup || "";
       if(action === "back") backspaceMobilePad();
       else if(action === "clear") clearMobilePad();
+      else if(groupKey){
+        activeMobilePadGroupKey = groupKey;
+        fillMobileTypingPad();
+      }
       else if(ch) appendMobilePadChar(ch);
     });
   }
